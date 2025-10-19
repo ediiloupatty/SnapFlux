@@ -1,0 +1,5 @@
+login_url: "https://subsiditepatlpg.mypertamina.id/merchant-login"
+max_retries: 3
+delay: 2
+backoff: 2
+log_file: "automation.log"
