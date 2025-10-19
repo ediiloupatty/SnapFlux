@@ -1,5 +1,6 @@
 """
-Browser driver setup and configuration
+Setup dan konfigurasi browser driver untuk automation
+File ini mengatur Chrome WebDriver dengan optimasi performa maksimal
 """
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -7,36 +8,49 @@ from selenium.webdriver.chrome.service import Service
 import os
 import logging
 
-# Setup logging
+# Setup logging untuk tracking error driver
 logger = logging.getLogger('driver_setup')
 
-# Config values (hardcoded to avoid import issues)
-CHROME_BINARY = r"D:\edi\Programing\Snapflux v2\chrome\Chromium\bin\chrome.exe"
-CHROMEDRIVER_PATH = r"D:\edi\Programing\Snapflux v2\chrome\chromedriver.exe"
+# Konfigurasi path Chrome binary dan ChromeDriver (hardcoded untuk menghindari masalah import)
+CHROME_BINARY = r"D:\edi\Programing\Snapflux v2\chrome\Chromium\bin\chrome.exe"      # Path ke executable Chrome
+CHROMEDRIVER_PATH = r"D:\edi\Programing\Snapflux v2\chrome\chromedriver.exe"         # Path ke ChromeDriver executable
 
 def setup_driver(headless=False):
-    """Setup Chrome WebDriver dengan konfigurasi optimal untuk performa maksimal"""
+    """
+    Setup Chrome WebDriver dengan konfigurasi optimal untuk performa maksimal
+    
+    Args:
+        headless (bool): Jika True, browser akan berjalan tanpa GUI untuk performa lebih cepat
+        
+    Returns:
+        webdriver.Chrome: Object WebDriver yang sudah dikonfigurasi
+        
+    Raises:
+        Exception: Jika terjadi error saat setup driver
+    """
     print("🚀 Setting up Chrome WebDriver dengan optimasi performa...")
     
     try:
-        # Chrome options
+        # Buat object ChromeOptions untuk mengatur setting browser
         options = Options()
         
-        # === OPTIMASI PERFORMA MAKSIMAL ===
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--disable-extensions")
-        options.add_argument("--disable-plugins")
-        options.add_argument("--disable-web-security")
-        options.add_argument("--disable-features=VizDisplayCompositor")
-        options.add_argument("--disable-background-timer-throttling")
-        options.add_argument("--disable-backgrounding-occluded-windows")
-        options.add_argument("--disable-renderer-backgrounding")
-        options.add_argument("--disable-field-trial-config")
-        options.add_argument("--disable-ipc-flooding-protection")
+        # ========== OPTIMASI PERFORMA MAKSIMAL ==========
+        # Opsi-opsi untuk meningkatkan kecepatan dan stabilitas browser
+        options.add_argument("--no-sandbox")                                    # Disable sandbox untuk performa
+        options.add_argument("--disable-dev-shm-usage")                         # Disable shared memory usage
+        options.add_argument("--disable-gpu")                                   # Disable GPU rendering
+        options.add_argument("--disable-extensions")                            # Disable browser extensions
+        options.add_argument("--disable-plugins")                               # Disable plugins
+        options.add_argument("--disable-web-security")                          # Disable web security untuk automation
+        options.add_argument("--disable-features=VizDisplayCompositor")         # Disable display compositor
+        options.add_argument("--disable-background-timer-throttling")           # Disable background throttling
+        options.add_argument("--disable-backgrounding-occluded-windows")        # Disable background tab throttling
+        options.add_argument("--disable-renderer-backgrounding")                # Disable renderer backgrounding
+        options.add_argument("--disable-field-trial-config")                   # Disable field trials
+        options.add_argument("--disable-ipc-flooding-protection")              # Disable IPC protection
         
-        # === BLOCK GAMBAR DAN MEDIA ===
+        # ========== BLOCK GAMBAR DAN MEDIA ==========
+        # Setting untuk memblokir konten yang tidak diperlukan untuk mempercepat loading
         prefs = {
             "profile.managed_default_content_settings.images": 2,  # Block images
             "profile.default_content_setting_values.notifications": 2,  # Block notifications

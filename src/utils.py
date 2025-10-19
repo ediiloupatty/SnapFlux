@@ -1,5 +1,6 @@
 """
-Utility functions and helpers
+Utility functions dan helper functions untuk automation script
+File ini berisi fungsi-fungsi bantuan untuk file handling, validasi, dan logging
 """
 import os
 import time
@@ -13,13 +14,16 @@ from datetime import datetime
 from collections import Counter
 from logging.handlers import RotatingFileHandler
 
-# Config values (hardcoded to avoid import issues)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AKUN_DIR = os.path.join(BASE_DIR, 'akun')
-RESULTS_DIR = os.path.join(BASE_DIR, 'results')
-LOGS_DIR = os.path.join(BASE_DIR, 'logs')
-LOG_FILE = os.path.join(LOGS_DIR, 'automation.log')
+# ========== KONFIGURASI PATH DIREKTORI ==========
+# Path-path direktori untuk menyimpan file-file penting
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Root directory project
+AKUN_DIR = os.path.join(BASE_DIR, 'akun')                              # Direktori file akun Excel
+RESULTS_DIR = os.path.join(BASE_DIR, 'results')                        # Direktori hasil export Excel
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')                              # Direktori file log
+LOG_FILE = os.path.join(LOGS_DIR, 'automation.log')                    # File log utama
 
+# ========== KONFIGURASI PROXY ==========
+# Setting proxy untuk koneksi internet (jika diperlukan)
 PROXY_CONFIG = {
     'host': '43.159.20.117',
     'port': '12233',
@@ -29,18 +33,26 @@ PROXY_CONFIG = {
     'auth_password': 'FOS5610Proxy908'
 }
 
+# ========== KONSTANTA BULAN INDONESIA ==========
+# Array nama bulan dalam bahasa Indonesia untuk format tanggal
 BULAN_ID = [
     '', 'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
     'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
 ]
 
+# Setup logger untuk tracking error dan informasi debugging
 logger = logging.getLogger('automation')
 
 def setup_logging():
-    """Setup logging configuration"""
-    os.makedirs(LOGS_DIR, exist_ok=True)
+    """
+    Setup konfigurasi logging untuk system automation
+    Membuat file log dengan rotating handler untuk mencegah file terlalu besar
+    """
+    os.makedirs(LOGS_DIR, exist_ok=True)  # Buat direktori logs jika belum ada
     
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.DEBUG)  # Set level logging ke DEBUG untuk detail maksimal
+    
+    # Setup rotating file handler - file log akan di-rotate setiap 2MB
     handler = RotatingFileHandler(LOG_FILE, maxBytes=2*1024*1024, backupCount=3, encoding='utf-8')
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     handler.setFormatter(formatter)
@@ -78,24 +90,43 @@ def is_valid_pin(pin):
     return pin.isdigit() and 4 <= len(pin) <= 8
 
 def load_accounts_from_excel(filename):
-    """Load accounts from Excel file with validation"""
+    """
+    Load data akun dari file Excel dengan validasi lengkap
+    Membaca file Excel dan memvalidasi setiap akun sebelum digunakan
+    
+    Args:
+        filename (str): Path ke file Excel yang berisi data akun
+        
+    Returns:
+        list: List tuple berisi (nama, username, pin) untuk akun yang valid
+        
+    Raises:
+        ValueError: Jika tidak ada akun valid ditemukan di file Excel
+    """
+    # Baca file Excel dengan tipe data yang tepat untuk setiap kolom
     df = pd.read_excel(filename, dtype={"Nama": str, "Username": str, "Password": str})
     valid_accounts = []
     
+    # Loop setiap baris dalam Excel untuk validasi dan ekstraksi data
     for _, row in df.iterrows():
-        nama = str(row['Nama']).strip()
-        username = str(row['Username']).strip()
-        pin = str(row['Password']).strip()
+        nama = str(row['Nama']).strip()      # Nama pangkalan (strip whitespace)
+        username = str(row['Username']).strip()  # Username bisa email atau nomor HP
+        pin = str(row['Password']).strip()       # PIN untuk login
         
-        # Username valid jika email atau nomor HP
+        # Validasi username - harus berupa email atau nomor HP yang valid
         if not (is_valid_email(username) or is_valid_phone(username)):
             logger.warning(f"Invalid username (bukan email/HP): {username}")
             continue
+            
+        # Validasi PIN - harus berupa angka dengan panjang 4-8 digit
         if not is_valid_pin(pin):
             logger.warning(f"Invalid PIN: {pin} for {username}")
             continue
+            
+        # Jika semua validasi passed, tambahkan ke list akun valid
         valid_accounts.append((nama, username, pin))
     
+    # Pastikan ada minimal satu akun valid
     if not valid_accounts:
         raise ValueError("No valid accounts found in Excel file!")
     

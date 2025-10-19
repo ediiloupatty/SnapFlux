@@ -10,7 +10,7 @@ Aplikasi ini mengotomatisasi login, navigasi, dan pengambilan laporan menggunaka
 ## 🚀 Key Features
 
 - **Automated Login & Navigation** - Login otomatis ke portal merchant
-- **Data Extraction** - Ekstraksi data penjualan dengan status dan timestamp  
+- **Data Extraction** - Ekstraksi data penjualan dengan status dan timestamp
 - **Stock Monitoring** - Automatic stock data retrieval jika data penjualan tidak ada
 - **Excel Export** - Export hasil ke format Excel dengan struktur yang rapi
 - **Headless Mode** - Mode tanpa GUI untuk performa optimal
@@ -27,6 +27,7 @@ Aplikasi ini mengotomatisasi login, navigasi, dan pengambilan laporan menggunaka
 ## 🚀 Quick Start
 
 ### 1. Installation
+
 ```bash
 git clone https://github.com/ediiloupatty/SnapFlux-Scraping-App-For-Merchant-Apps-Pertamina.git
 cd SnapFlux-Scraping-App-For-Merchant-Apps-Pertamina
@@ -34,6 +35,7 @@ pip install -r requirements.txt
 ```
 
 ### 2. Configuration
+
 ```bash
 # Setup configuration
 cp config.yaml.example config.yaml
@@ -43,6 +45,7 @@ cp akun/akun.xlsx.example akun/akun.xlsx
 ```
 
 ### 3. Run
+
 ```bash
 python main.py
 ```
@@ -68,11 +71,13 @@ SnapFlux-Scraping-App-For-Merchant-Apps-Pertamina/
 ## ⚙️ Configuration
 
 Edit `config.yaml` untuk mengatur:
+
 - Login URL dan retry settings
 - Delay dan timeout configurations
 - Log file settings
 
 Edit `akun/akun.xlsx` dengan:
+
 - Nama pangkalan
 - Username (email/phone)
 - PIN credentials
@@ -80,6 +85,7 @@ Edit `akun/akun.xlsx` dengan:
 ## 💻 System Requirements
 
 ### Minimum
+
 - **OS**: Windows 10 (64-bit) / Linux / macOS
 - **Python**: 3.7+
 - **RAM**: 4 GB
@@ -87,7 +93,8 @@ Edit `akun/akun.xlsx` dengan:
 - **Network**: ≥ 5 Mbps stable connection
 
 ### Recommended
-- **OS**: Windows 11 / Latest Linux / macOS  
+
+- **OS**: Windows 11 / Latest Linux / macOS
 - **Python**: 3.9+
 - **RAM**: 8+ GB
 - **Storage**: SSD dengan ≥ 5 GB free space
@@ -103,11 +110,13 @@ Edit `akun/akun.xlsx` dengan:
 ## 🛠️ Development
 
 ### Dependencies
+
 ```bash
 pip install selenium pandas requests openpyxl
 ```
 
 ### Key Components
+
 - **Selenium WebDriver** - Browser automation
 - **pandas** - Data processing and Excel export
 - **requests** - HTTP client for API calls

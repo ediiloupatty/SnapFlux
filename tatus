@@ -1,0 +1,187 @@
+[1mdiff --cc README.md[m
+[1mindex edd0798,b37560a..0000000[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@@ -1,138 -1,41 +1,182 @@@[m
+[32m++<<<<<<< HEAD[m
+[32m +# Snapflux Automation v2[m
+[32m +[m
+[32m +Automation script untuk mengambil data transaksi dari platform Snapflux menggunakan Selenium WebDriver.[m
+[32m +[m
+[32m +## 🚀 Setup Sebelum Push ke GitHub[m
+[32m +[m
+[32m +### 1. File yang TIDAK akan di-push (dalam .gitignore):[m
+[32m +[m
+[32m +- **Akun dan Data Sensitif:**[m
+[32m +[m
+[32m +  - `akun/` - Folder berisi data akun (.xlsx files)[m
+[32m +  - `config.yaml` - File konfigurasi yang mungkin berisi data sensitif[m
+[32m +[m
+[32m +- **Browser dan Automation Files:**[m
+[32m +[m
+[32m +  - `chrome/` - Browser binary dan driver executable[m
+[32m +  - `chrome_profile/` - Browser profile data[m
+[32m +  - `chromedriver.exe` - ChromeDriver executable[m
+[32m +  - `drivers/` - WebDriver files[m
+[32m +[m
+[32m +- **Log dan Results:**[m
+[32m +[m
+[32m +  - `logs/` - File log automation[m
+[32m +  - `results/` - Output Excel files[m
+[32m +  - `*.log` - Semua file log[m
+[32m +[m
+[32m +- **Cache dan Temporary:**[m
+[32m +  - `__pycache__/` - Python cache[m
+[32m +  - `*.tmp`, `*.temp` - Temporary files[m
+[32m +  - `debug_calendar_selectors.txt` - Debug files[m
+[32m +[m
+[32m +### 2. Sebelum Push - Buat File Template:[m
+[32m +[m
+[32m +Buat file template untuk konfigurasi dan akun:[m
+[32m +[m
+[32m +```bash[m
+[32m +# Copy dan rename file konfigurasi[m
+[32m +cp config.yaml config.yaml.example[m
+[32m +[m
+[32m +# Copy dan rename file akun template[m
+[32m +cp akun/akun.xlsx akun/akun.xlsx.example[m
+[32m +```[m
+[32m +[m
+[32m +### 3. Yang akan di-push ke GitHub:[m
+[32m +[m
+[32m +- **Source Code:**[m
+[32m +[m
+[32m +  - `main.py` - Entry point utama[m
+[32m +  - `src/` - Folder berisi source code Python[m
+[32m +  - `icon/` - Icons untuk GUI (jika ada)[m
+[32m +[m
+[32m +- **Documentation:**[m
+[32m +[m
+[32m +  - `README.md` - Dokumentasi proyek[m
+[32m +  - `README_HEADLESS.md` - Dokumentasi mode headless[m
+[32m +[m
+[32m +- **Configuration Templates:**[m
+[32m +  - `config.yaml.example` - Template konfigurasi[m
+[32m +  - `akun/akun.xlsx.example` - Template file akun[m
+[32m +[m
+[32m +## 📋 Setup untuk Developer Baru[m
+[32m +[m
+[32m +1. **Clone repository:**[m
+[32m +[m
+[32m +   ```bash[m
+[32m +   git clone <repository-url>[m
+[32m +   cd snapflux-automation-v2[m
+[32m +   ```[m
+[32m +[m
+[32m +2. **Setup environment:**[m
+[32m +[m
+[32m +   ```bash[m
+[32m +   pip install -r requirements.txt  # Jika ada[m
+[32m +   ```[m
+[32m +[m
+[32m +3. **Setup konfigurasi:**[m
+[32m +[m
+[32m +   ```bash[m
+[32m +   cp config.yaml.example config.yaml[m
+[32m +   cp akun/akun.xlsx.example akun/akun.xlsx[m
+[32m +   ```[m
+[32m +[m
+[32m +4. **Download ChromeDriver:**[m
+[32m +[m
+[32m +   ```bash[m
+[32m +   # Download ChromeDriver sesuai versi Chrome Anda[m
+[32m +   # Letakkan di root folder sebagai chromedriver.exe[m
+[32m +   ```[m
+[32m +[m
+[32m +5. **Setup browser:**[m
+[32m +   ```bash[m
+[32m +   # Download Chrome/Chromium browser[m
+[32m +   # Extract ke folder chrome/[m
+[32m +   ```[m
+[32m +[m
+[32m +## 🔧 Cara Menjalankan[m
+[32m +[m
+[32m +```bash[m
+[32m +python main.py[m
+[32m +```[m
+[32m +[m
+[32m +## 📁 Struktur Proyek[m
+[32m +[m
+[32m +```[m
+[32m +snapflux-automation-v2/[m
+[32m +├── main.py                 # Entry point[m
+[32m +├── src/                    # Source code[m
+[32m +│   ├── login_handler.py    # Login automation[m
+[32m +│   ├── utils.py            # Utility functions[m
+[32m +│   └── driver_setup.py     # WebDriver setup[m
+[32m +├── akun/                   # Account data (gitignored)[m
+[32m +├── results/                # Output files (gitignored)[m
+[32m +├── logs/                   # Log files (gitignored)[m
+[32m +├── chrome/                 # Browser files (gitignored)[m
+[32m +├── chrome_profile/         # Browser profile (gitignored)[m
+[32m +├── config.yaml.example     # Config template[m
+[32m +└── README.md               # This file[m
+[32m +```[m
+[32m +[m
+[32m +## ⚠️ Security Notes[m
+[32m +[m
+[32m +- JANGAN commit file `akun.xlsx` yang berisi data akun real[m
+[32m +- JANGAN commit `config.yaml` yang berisi konfigurasi sensitif[m
+[32m +- SELALU gunakan `.example` files untuk template[m
+[32m +- Browser binary dan driver terlalu besar untuk git (gunakan .gitignore)[m
+[32m +[m
+[32m +## 🛠️ Development[m
+[32m +[m
+[32m +Proyek ini menggunakan:[m
+[32m +[m
+[32m +- Python 3.x[m
+[32m +- Selenium WebDriver[m
+[32m +- Chrome/Chromium browser[m
+[32m +- pandas untuk Excel export[m
+[32m +[m
+[32m +## 📝 License[m
+[32m +[m
+[32m +[Tambahkan informasi license sesuai kebutuhan][m
+[32m++=======[m
+[32m+ # SnapFlux v1.0.0[m
+[32m+ [m
+[32m+ ## Description[m
+[32m+ SnapFlux is an application for automated web scraping and data extraction from the [subsiditepatlpg.mypertamina.id](https://subsiditepatlpg.mypertamina.id) portal.  [m
+[32m+ It automates login, navigation, and report retrieval using Selenium.  [m
+[32m+ Chromium and WebDriver are bundled, so no extra setup is needed.[m
+[32m+ [m
+[32m+ ## Key Features[m
+[32m+ - Automated login and navigation  [m
+[32m+ - Sales data extraction with status and timestamp  [m
+[32m+ - Automatic stock data retrieval if sales data is missing  [m
+[32m+ - Export results to Excel  [m
+[32m+ - Pre-bundled Chromium & WebDriver (plug-and-play)[m
+[32m+ [m
+[32m+ ## Technical Details[m
+[32m+ - Version: v1.0.0  [m
+[32m+ - File size: ~800 MB  [m
+[32m+ - OS: Windows 64-bit  [m
+[32m+ - Technology: Selenium + Chromium  [m
+[32m+ [m
+[32m+ ## System Requirements[m
+[32m+ ### Minimum[m
+[32m+ - OS: Windows 10 (64-bit) build 1903+ / Windows 11 (64-bit)  [m
+[32m+ - CPU: Dual-core (Intel i3 / AMD equivalent)  [m
+[32m+ - RAM: 4 GB  [m
+[32m+ - Storage: 1–2 GB free (SSD recommended)  [m
+[32m+ - Display: 1366×768  [m
+[32m+ - Network: ≥ 5 Mbps stable, ping < 200 ms  [m
+[32m+ [m
+[32m+ ### Recommended[m
+[32m+ - OS: Windows 11 latest / Windows 10 22H2 (64-bit)  [m
+[32m+ - CPU: Quad-core+ (Intel i5 / AMD Ryzen 5)  [m
+[32m+ - RAM: 8–16 GB  [m
+[32m+ - Storage: SSD with ≥ 5 GB free  [m
+[32m+ - Display: 1920×1080  [m
+[32m+ - Network: ≥ 10–20 Mbps stable, ping < 100 ms  [m
+[32m+ [m
+[32m+ ## Notes[m
+[32m+ - Run installer as Administrator if installation fails.  [m
+[32m+ - Loading may take up to 30 seconds after launch.  [m
+[32m+ - The app cannot be minimized to tray; use in full-screen mode.[m
+[32m++>>>>>>> 904400238c24a2cfbab14c28d5dde80f375adb6d[m

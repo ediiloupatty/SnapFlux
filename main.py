@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Main entry point untuk automation script
+Main entry point untuk automation script SnapFlux
+Script ini mengotomatisasi pengambilan data transaksi dari platform merchant Pertamina
 """
 import os
 import sys
@@ -8,26 +9,29 @@ import time
 import random
 from datetime import datetime
 
-# Add src to path
+# Tambahkan direktori src ke path Python agar bisa import module
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
+# Import modul yang diperlukan
 from utils import *
 from driver_setup import setup_driver
 from login_handler import login_direct
 
 def main():
-    """Fungsi utama batch untuk banyak akun, dengan pengukuran waktu proses dan rekap hasil akhir."""
+    """
+    Fungsi utama untuk menjalankan automation batch processing
+    Memproses multiple akun dengan retry mechanism dan tracking hasil
+    """
     
-    # Create necessary directories
-    os.makedirs('akun', exist_ok=True)
-    os.makedirs('results', exist_ok=True)
-    os.makedirs('logs', exist_ok=True)
+    # Buat direktori yang diperlukan jika belum ada
+    os.makedirs('akun', exist_ok=True)      # Direktori untuk file akun
+    os.makedirs('results', exist_ok=True)   # Direktori untuk hasil Excel
+    os.makedirs('logs', exist_ok=True)      # Direktori untuk file log
     
-    # Setup logging
+    # Setup system logging untuk tracking error dan debug
     setup_logging()
     
-    
-    # Load accounts from Excel
+    # Load data akun dari file Excel
     try:
         accounts = load_accounts_from_excel(os.path.join('akun', 'akun.xlsx'))
         if not accounts:
@@ -37,12 +41,13 @@ def main():
         print(f"❌ Error membaca file akun: {str(e)}")
         return
     
-    # Print account stats
+    # Tampilkan statistik akun yang akan diproses
     print_account_stats(accounts)
     
-    # Minta input tanggal dari user
+    # Minta input filter tanggal dari user (opsional)
     selected_date = get_date_input()
     
+    # Tampilkan informasi mode operasi
     if selected_date:
         print(f"\n🚀 Memulai proses dengan filter tanggal: {selected_date.strftime('%d %B %Y')}")
     else:
@@ -51,41 +56,45 @@ def main():
     print("🌐 Program akan berjalan dengan browser window yang terlihat")
     print("👀 Anda dapat melihat proses scraping secara realtime di browser")
     
-    total_start = time.time()
-    akun_durations = []
+    # Inisialisasi tracking waktu dan status
+    total_start = time.time()  # Waktu mulai proses keseluruhan
+    akun_durations = []        # Array untuk menyimpan durasi setiap akun
     
-    # Status tracking
+    # Dictionary untuk tracking status hasil pemrosesan setiap akun
     rekap = {
-        'sukses': [],
-        'gagal_login': [],
-        'gagal_navigasi': [],
-        'gagal_waktu': [],
-        'gagal_stok': [],
-        'error_lain': []
+        'sukses': [],          # Akun yang berhasil diproses
+        'gagal_login': [],     # Akun yang gagal login
+        'gagal_navigasi': [],  # Akun yang gagal navigasi
+        'gagal_waktu': [],     # Akun yang timeout
+        'gagal_stok': [],      # Akun yang gagal ambil data stok
+        'error_lain': []       # Error lain yang tidak terduga
     }
     
-    # Track completed accounts for delay logic
+    # Counter untuk tracking jumlah akun yang sudah selesai
     completed_accounts = 0
     
+    # Loop utama: proses setiap akun satu per satu
     for account_index, (nama, username, pin) in enumerate(accounts):
-        akun_status = 'sukses'
-        akun_error = ''
-        driver = None
-        akun_start = time.time()
+        # Inisialisasi status dan variabel untuk akun saat ini
+        akun_status = 'sukses'      # Status default: sukses
+        akun_error = ''             # Pesan error jika ada masalah
+        driver = None               # WebDriver object untuk browser automation
+        akun_start = time.time()    # Waktu mulai pemrosesan akun ini
         
-        # Retry mechanism untuk setiap akun
-        max_retries = 3
-        retry_count = 1  # Mulai dari percobaan ke-2
-        account_success = False
+        # Retry mechanism: jika gagal, coba ulang maksimal 3 kali
+        max_retries = 3             # Jumlah maksimal percobaan
+        retry_count = 1             # Counter percobaan (mulai dari 1)
+        account_success = False     # Flag untuk menandai apakah akun berhasil diproses
         
+        # Loop retry: coba lagi jika gagal sampai maksimal percobaan
         while retry_count < max_retries and not account_success:
             try:
                 print(f"🔄 Percobaan ke-{retry_count + 1} untuk akun {username}")
-                time.sleep(5)
+                time.sleep(5)  # Delay 5 detik sebelum percobaan berikutnya
                 
-                # === TAHAP 1: LOGIN AWAL (VALIDASI) ===
+                # ========== TAHAP 1: LOGIN AWAL (VALIDASI) ==========
                 print(f"🔐 Memulai login validasi untuk akun {username}...")
-                driver = login_direct(username, pin)
+                driver = login_direct(username, pin)  # Panggil fungsi login langsung
                 
                 if not driver:
                     alasan = f"Login gagal percobaan ke-{retry_count + 1}"

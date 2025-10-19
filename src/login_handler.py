@@ -1,5 +1,6 @@
 """
-Login handling and authentication functions
+Login handling dan fungsi authentication untuk platform merchant Pertamina
+File ini menangani semua proses login, navigasi, dan ekstraksi data dari dashboard
 """
 import time
 from selenium.webdriver.common.by import By
@@ -8,14 +9,24 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import logging
 
-# Config values (hardcoded to avoid import issues)
-LOGIN_URL = "https://subsiditepatlpg.mypertamina.id/merchant-login"
-logger = logging.getLogger('automation')
+# ========== KONFIGURASI URL ==========
+LOGIN_URL = "https://subsiditepatlpg.mypertamina.id/merchant-login"  # URL login merchant portal
+logger = logging.getLogger('automation')  # Logger untuk tracking error dan debug
 
 from driver_setup import setup_driver
 
 def login_direct(username, pin):
-    """Login langsung dengan strategi yang sudah terbukti berhasil"""
+    """
+    Login langsung dengan strategi yang sudah terbukti berhasil
+    Fungsi ini melakukan login otomatis ke portal merchant dengan retry mechanism
+    
+    Args:
+        username (str): Username berupa email atau nomor HP
+        pin (str): PIN untuk authentication
+        
+    Returns:
+        webdriver.Chrome: WebDriver object jika login berhasil, None jika gagal
+    """
     print(f"\n🔐 === LOGIN LANGSUNG UNTUK {username} ===")
     
     driver = None
