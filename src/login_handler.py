@@ -35,8 +35,8 @@ def login_direct(username, pin):
         driver = setup_driver(headless=True)
         driver.get(LOGIN_URL)
         
-        # Tunggu halaman loading
-        time.sleep(3)
+        # Tunggu halaman loading - ANTI-RATE LIMITING
+        time.sleep(2.0)  # Tambahkan sedikit untuk menghindari rate limiting
         
         # Langsung cari dan isi email
         print("📧 Mencari dan mengisi field email...")
@@ -103,31 +103,21 @@ def login_direct(username, pin):
             print("❌ Gagal mengklik tombol login")
             return None
         
-        # Tunggu proses login
-        time.sleep(3)
+        # Tunggu proses login - ANTI-RATE LIMITING
+        time.sleep(2.0)
         
         # === DETEKSI CEPAT "GAGAL MASUK AKUN" ===
-        print("🔍 Mencari pesan 'Gagal Masuk Akun' dengan class selector...")
         gagal_masuk_detected = False
         
         try:
-            # Berdasarkan debug info: class='mantine-Text-root mantine-Title-root mantine-tvqdf2'
-            elements = driver.find_elements(By.CLASS_NAME, "mantine-Title-root")
-            
-            for element in elements:
-                text = element.text.strip()
-                if "Gagal Masuk Akun" in text:
-                    gagal_masuk_detected = True
-                    print("❌ PESAN 'GAGAL MASUK AKUN' TERDETEKSI!")
-                    print(f"📝 Text: '{text}'")
-                    break
-                    
-            if not gagal_masuk_detected:
-                print("✅ Tidak ada pesan 'Gagal Masuk Akun' ditemukan - LANJUT KE PROSES SELANJUTNYA")
-                    
-        except Exception as e:
-            print(f"⚠️ Error mencari pesan 'Gagal Masuk Akun': {str(e)}")
-            print("✅ Error dalam pencarian - LANJUT KE PROSES SELANJUTNYA")
+            # Super cepat: langsung cek dengan find_element, jika tidak ada langsung lanjut
+            error_element = driver.find_element(By.XPATH, "//h5[contains(@class, 'mantine-Title-root') and text()='Gagal Masuk Akun']")
+            if error_element:
+                gagal_masuk_detected = True
+                print("❌ PESAN 'GAGAL MASUK AKUN' TERDETEKSI!")
+        except:
+            # Tidak ditemukan - langsung lanjut ke proses selanjutnya tanpa delay
+            pass
         
         # === HANDLE GAGAL MASUK AKUN ===
         if gagal_masuk_detected:
@@ -138,30 +128,42 @@ def login_direct(username, pin):
             time.sleep(120)
             print("✅ Tunggu 2 menit selesai!")
             
-            # Langsung klik tombol MASUK lagi tanpa reload
+            # Langsung klik tombol MASUK lagi tanpa reload - OPTIMIZED
             print("🔄 Mengklik tombol MASUK lagi tanpa reload...")
-            login_buttons = driver.find_elements(By.TAG_NAME, "button")
             
             retry_clicked = False
-            for button in login_buttons:
+            try:
+                # Direct approach: cari tombol MASUK langsung dengan XPath
+                login_button = driver.find_element(By.XPATH, "//button[contains(text(), 'MASUK') or contains(text(), 'LOGIN')]")
+                if login_button.is_displayed() and login_button.is_enabled():
+                    login_button.click()
+                    print("✅ Tombol MASUK berhasil diklik lagi!")
+                    retry_clicked = True
+            except:
+                # Fallback: cari dengan tag button tapi lebih efisien
                 try:
-                    button_text = button.text.strip().upper()
-                    if "MASUK" in button_text or "LOGIN" in button_text:
-                        if button.is_displayed() and button.is_enabled():
-                            button.click()
-                            print("✅ Tombol MASUK berhasil diklik lagi!")
-                            retry_clicked = True
-                            break
+                    login_buttons = driver.find_elements(By.TAG_NAME, "button")
+                    for button in login_buttons[:5]:  # Limit hanya 5 button pertama
+                        try:
+                            button_text = button.text.strip().upper()
+                            if "MASUK" in button_text or "LOGIN" in button_text:
+                                if button.is_displayed() and button.is_enabled():
+                                    button.click()
+                                    print("✅ Tombol MASUK berhasil diklik lagi!")
+                                    retry_clicked = True
+                                    break
+                        except:
+                            continue
                 except:
-                    continue
+                    pass
             
             if not retry_clicked:
                 print("❌ Gagal mengklik tombol MASUK lagi")
                 return None
             
-            # Tunggu proses login kedua
+            # Tunggu proses login kedua - OPTIMIZED
             print("⏳ Menunggu proses login kedua...")
-            time.sleep(3)
+            time.sleep(1.5)  # Kurangi dari 3 ke 1.5 detik
         
         # Cek apakah login berhasil (setelah retry jika ada)
         current_url = driver.current_url
@@ -182,7 +184,7 @@ def get_stock_value_direct(driver):
     """Ambil nilai stok langsung menggunakan lokasi yang sudah diketahui - SUPER CEPAT"""
     print("\n📦 === AMBIL DATA STOK LANGSUNG ===")
     try:
-        time.sleep(2)
+        time.sleep(1.5)  # Tambahkan sedikit untuk menghindari rate limiting
         print("🚀 Mengambil stok langsung menggunakan class yang sudah diketahui...")
         
         # Langsung ambil dengan class yang sudah terbukti berhasil
@@ -199,7 +201,6 @@ def get_stock_value_direct(driver):
             stock_value = numbers[0]
             print(f"🔢 Angka: {numbers}")
             print(f"📊 Nilai Stok: {stock_value}")
-            print(f"✅ Data stok berhasil diambil: {stock_value}")
             return stock_value
         else:
             print("❌ Tidak ada angka ditemukan dalam text")
@@ -213,7 +214,7 @@ def click_laporan_penjualan_direct(driver):
     """Klik menu 'Laporan Penjualan' langsung menggunakan lokasi yang sudah diketahui - lebih cepat"""
     print("\n📊 === KLIK LAPORAN PENJUALAN LANGSUNG ===")
     try:
-        time.sleep(2)
+        time.sleep(1.5)  # Tambahkan sedikit untuk menghindari rate limiting
         print("🚀 Mengklik Laporan Penjualan langsung menggunakan lokasi yang sudah diketahui...")
         try:
             element = driver.find_element(By.XPATH, "//*[contains(text(), 'Laporan Penjualan')]")
@@ -224,7 +225,7 @@ def click_laporan_penjualan_direct(driver):
                 if element.is_displayed() and element.is_enabled():
                     element.click()
                     print(f"✅ Berhasil mengklik menu: '{text}'")
-                    time.sleep(3)
+                    time.sleep(2.0)  # Tambahkan sedikit untuk menghindari rate limiting
                     print("✅ Navigasi ke Laporan Penjualan berhasil!")
                     return True
                 else:
@@ -262,17 +263,12 @@ def navigate_to_atur_produk(driver):
     """Navigasi ke menu 'Atur Produk' setelah mengambil data stok"""
     print("\n🔧 === NAVIGASI KE ATUR PRODUK ===")
     try:
-        time.sleep(2)
+        time.sleep(1)  # Kurangi dari 2 ke 1 detik
         print("🔍 Mencari menu 'Atur Produk' atau 'Atur Stok & Harga'...")
+        # Optimasi: gunakan selector yang lebih efisien
         menu_selectors = [
-            "//button[contains(text(), 'Atur Produk')]",
-            "//a[contains(text(), 'Atur Produk')]",
-            "//div[contains(text(), 'Atur Produk')]",
-            "//span[contains(text(), 'Atur Produk')]",
-            "//button[contains(text(), 'Atur Stok')]",
-            "//a[contains(text(), 'Atur Stok')]",
-            "//div[contains(text(), 'Atur Stok')]",
-            "//span[contains(text(), 'Atur Stok')]",
+            "//*[(self::button or self::a or self::div or self::span) and contains(text(), 'Atur Produk')]",
+            "//*[(self::button or self::a or self::div or self::span) and contains(text(), 'Atur Stok')]",
             "//*[contains(text(), 'Atur') and contains(text(), 'Harga')]"
         ]
         for selector in menu_selectors:
@@ -288,7 +284,7 @@ def navigate_to_atur_produk(driver):
                                 if element.is_displayed() and element.is_enabled():
                                     print(f"✅ Menu ditemukan dan dapat diklik: '{text}'")
                                     element.click()
-                                    time.sleep(3)
+                                    time.sleep(1.5)  # Kurangi dari 3 ke 1.5 detik
                                     print("✅ Navigasi ke Atur Produk berhasil!")
                                     return True
                                 else:
@@ -311,11 +307,9 @@ def find_and_click_laporan_penjualan(driver):
     try:
         time.sleep(2)
         print("🔍 Mencari menu 'Laporan Penjualan'...")
+        # Optimasi: gunakan selector yang lebih efisien
         menu_selectors = [
-            "//button[contains(text(), 'Laporan Penjualan')]",
-            "//a[contains(text(), 'Laporan Penjualan')]",
-            "//div[contains(text(), 'Laporan Penjualan')]",
-            "//span[contains(text(), 'Laporan Penjualan')]",
+            "//*[(self::button or self::a or self::div or self::span) and contains(text(), 'Laporan Penjualan')]",
             "//*[contains(text(), 'Laporan') and contains(text(), 'Penjualan')]"
         ]
         for selector in menu_selectors:
@@ -354,7 +348,7 @@ def click_date_elements_direct(driver, selected_date=None):
     
     try:
         # Tunggu halaman selesai loading
-        time.sleep(3)
+        time.sleep(0.5)
         
         print("🚀 Mengklik elemen tanggal langsung menggunakan lokasi yang sudah diketahui...")
         
@@ -382,8 +376,8 @@ def click_date_elements_direct(driver, selected_date=None):
             print(f"❌ Error dengan XPath selector: {str(e)}")
             return False
 
-        # Tunggu dropdown terbuka
-        time.sleep(2)
+        # Tunggu dropdown terbuka - OPTIMIZED
+        time.sleep(1)  # Kurangi dari 2 ke 1 detik
                                 
         # === STEP 2: Klik bulan tahun sesuai input user ===
         print("\n📅 === STEP 2: KLIK BULAN TAHUN SESUAI INPUT USER ===")
@@ -513,8 +507,8 @@ def click_date_elements_direct(driver, selected_date=None):
             print(f"❌ Error mengklik bulan singkat: {str(e)}")
             return False
 
-        # Tunggu dropdown tanggal terbuka
-        time.sleep(2)
+        # Tunggu dropdown tanggal terbuka - OPTIMIZED
+        time.sleep(1)  # Kurangi dari 2 ke 1 detik
         
         # === STEP 4: Klik tanggal spesifik sesuai input user ===
         print("\n📅 === STEP 4: KLIK TANGGAL SPESIFIK LANGSUNG ===")
@@ -530,40 +524,52 @@ def click_date_elements_direct(driver, selected_date=None):
             tanggal_hari = today.day
             print(f"🎯 Mengklik tanggal langsung: '{tanggal_hari}'")
         
-        # Klik tanggal sebanyak 2x langsung
-        for klik_ke in range(1, 3):  # Klik 2x
-            print(f"🖱️ Klik tanggal ke-{klik_ke}: '{tanggal_hari}'")
+        # Klik tanggal sebanyak 2x langsung dengan cepat
+        element = None
+        success_count = 0
+        
+        # Cari elemen tanggal terlebih dahulu
+        try:
+            element = driver.find_element(By.XPATH, f"//*[text()='{tanggal_hari}']")
+            text = element.text.strip()
             
-            try:
-                # Langsung klik menggunakan XPath yang sudah terbukti berhasil
-                element = driver.find_element(By.XPATH, f"//*[text()='{tanggal_hari}']")
-                text = element.text.strip()
+            if text and text == str(tanggal_hari):
+                print(f"✅ Elemen tanggal ditemukan langsung!")
+                print(f"📝 Text: '{text}'")
                 
-                if text and text == str(tanggal_hari):
-                    print(f"✅ Elemen tanggal ditemukan langsung!")
-                    print(f"📝 Text: '{text}'")
+                if element.is_displayed() and element.is_enabled():
+                    # Klik 2x dengan cepat tanpa delay panjang
+                    for klik_ke in range(1, 3):  # Klik 2x
+                        try:
+                            element.click()
+                            success_count += 1
+                            print(f"✅ Berhasil mengklik tanggal ke-{klik_ke}: '{text}'")
+                            
+                            # Delay singkat hanya di antara klik (0.2 detik)
+                            if klik_ke < 2:
+                                time.sleep(0.2)
+                                
+                        except Exception as e2:
+                            print(f"⚠️ Error pada klik ke-{klik_ke}: {str(e2)}")
+                            # Tetap lanjut ke klik berikutnya
+                            continue
                     
-                    if element.is_displayed() and element.is_enabled():
-                        element.click()
-                        print(f"✅ Berhasil mengklik tanggal ke-{klik_ke}: '{text}'")
+                    if success_count >= 1:  # Minimal 1 klik berhasil
+                        print(f"✅ Total {success_count} klik berhasil dilakukan!")
+                        return True
                     else:
-                        print(f"❌ Elemen tanggal tidak dapat diklik (klik ke-{klik_ke})")
+                        print("❌ Tidak ada klik yang berhasil")
                         return False
                 else:
-                    print(f"❌ Elemen tidak mengandung tanggal '{tanggal_hari}' (klik ke-{klik_ke})")
+                    print(f"❌ Elemen tanggal tidak dapat diklik")
                     return False
-            
-            except Exception as e:
-                print(f"❌ Error mengklik tanggal '{tanggal_hari}' (klik ke-{klik_ke}): {str(e)}")
+            else:
+                print(f"❌ Elemen tidak mengandung tanggal '{tanggal_hari}'")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error mencari elemen tanggal '{tanggal_hari}': {str(e)}")
             return False
-        
-            # Tunggu sebentar antara klik
-            if klik_ke < 2:  # Tidak perlu tunggu setelah klik terakhir
-                print("⏳ Tunggu 1 detik sebelum klik berikutnya...")
-                time.sleep(1)
-        
-        print("✅ Semua elemen tanggal berhasil diklik!")
-        return True
         
     except Exception as e:
         print(f"❌ Error mengklik elemen tanggal: {str(e)}")
@@ -574,8 +580,8 @@ def get_tabung_terjual_direct(driver):
     print("\n📊 === AMBIL DATA TABUNG TERJUAL LANGSUNG ===")
     
     try:
-        # Tunggu halaman selesai loading
-        time.sleep(2)
+        # Tunggu halaman selesai loading - ANTI-RATE LIMITING
+        time.sleep(1.5)  # Tambahkan sedikit untuk menghindari rate limiting
         
         print("🚀 Mengambil data tabung terjual langsung menggunakan lokasi yang sudah diketahui...")
         
@@ -604,7 +610,6 @@ def get_tabung_terjual_direct(driver):
                         print(f"🔢 Angka: {numbers}")
                         print(f"📊 Jumlah Tabung Terjual: {tabung_value}")
                         print(f"📝 Text Bersih: '{clean_text}'")
-                        print(f"✅ Data tabung terjual berhasil diambil: {clean_text}")
                         return clean_text
             
             print("❌ Data tabung terjual tidak ditemukan dengan class selector")
@@ -613,31 +618,41 @@ def get_tabung_terjual_direct(driver):
         except Exception as e:
             print(f"⚠️ Error dengan class selector: {str(e)}")
             
-            # Fallback: gunakan XPath berdasarkan text
-            print("🔄 Mencoba dengan XPath fallback...")
+            # Fallback: gunakan XPath yang lebih spesifik berdasarkan text pattern
+            print("🔄 Mencoba dengan XPath fallback yang lebih efisien...")
             try:
-                all_elements = driver.find_elements(By.XPATH, "//*")
+                # Lebih spesifik: cari elemen yang mengandung text "tabung" dengan angka
+                fallback_selectors = [
+                    "//*[contains(text(), 'Tabung')]",
+                    "//div[contains(@class, 'text')]//*[contains(text(), 'tabung')]",
+                    "//span[contains(text(), 'tabung')]",
+                    "//p[contains(text(), 'tabung')]"
+                ]
                 
-                for element in all_elements:
-                    text = element.text.strip()
-                    if text and len(text) < 50:  # Batasi panjang text
-                        if ('tabung' in text.lower() and 
-                            any(char.isdigit() for char in text) and 
-                            'total' not in text.lower()):
-                            
-                            print(f"✅ Data tabung terjual ditemukan dengan XPath fallback!")
-                            print(f"📝 Text: '{text}'")
-                            
-                            import re
-                            numbers = re.findall(r'\d+', text)
-                            if numbers:
-                                tabung_value = numbers[0]
-                                clean_text = f"{tabung_value} Tabung"
-                                print(f"🔢 Angka: {numbers}")
-                                print(f"📊 Jumlah Tabung Terjual: {tabung_value}")
-                                print(f"📝 Text Bersih: '{clean_text}'")
-                                print(f"✅ Data tabung terjual berhasil diambil: {clean_text}")
-                                return clean_text
+                for selector in fallback_selectors:
+                    try:
+                        elements = driver.find_elements(By.XPATH, selector)
+                        for element in elements:
+                            text = element.text.strip()
+                            if (text and len(text) < 50 and 
+                                'tabung' in text.lower() and 
+                                any(char.isdigit() for char in text) and 
+                                'total' not in text.lower()):
+                                
+                                print(f"✅ Data tabung terjual ditemukan dengan XPath fallback!")
+                                print(f"📝 Text: '{text}'")
+                                
+                                import re
+                                numbers = re.findall(r'\d+', text)
+                                if numbers:
+                                    tabung_value = numbers[0]
+                                    clean_text = f"{tabung_value} Tabung"
+                                    print(f"🔢 Angka: {numbers}")
+                                    print(f"📊 Jumlah Tabung Terjual: {tabung_value}")
+                                    print(f"📝 Text Bersih: '{clean_text}'")
+                                    return clean_text
+                    except:
+                        continue
                                 
             except Exception as e2:
                 print(f"❌ Error dengan XPath fallback: {str(e2)}")

@@ -103,8 +103,10 @@ def main():
         # Loop retry: coba lagi jika gagal sampai maksimal percobaan
         while retry_count < max_retries and not account_success:
             try:
-                print(f"🔄 Percobaan ke-{retry_count + 1} untuk akun {username}")
-                time.sleep(5)  # Delay 5 detik sebelum percobaan berikutnya
+                print(f"🔄 Percobaan ke-{retry_count} untuk akun {username}")
+                # Optimasi: Hanya delay jika ini retry (bukan percobaan pertama)
+                if retry_count > 1:  # retry_count dimulai dari 1, jadi >1 berarti retry
+                    time.sleep(2)  # Kurangi dari 5 ke 2 detik, hanya untuk retry
                 
                 # ========== TAHAP 1: LOGIN AWAL (VALIDASI) ==========
                 print(f"🔐 Memulai login validasi untuk akun {username}...")
@@ -315,7 +317,7 @@ def main():
                     break
                 else:
                     print(f"🔄 Akan mencoba ulang untuk akun {username}...")
-                    time.sleep(2)
+                    time.sleep(1)  # Kurangi dari 2 ke 1 detik
             
             finally:
                 # Browser management akan dilakukan di bawah setelah logic delay
@@ -326,12 +328,12 @@ def main():
         akun_durations.append(akun_duration)
         print(f"⏱️ Waktu proses akun {username}: {akun_duration:.2f} detik\n")
         
-        # ========== CATATAN: LOGIC JEDA DITIADAKAN ==========
-        # Logic untuk jeda dan tutup browser setelah 3 akun telah dinonaktifkan
-        # untuk performa maksimal dan proses yang lebih cepat
-        # Browser akan tetap terbuka sepanjang proses untuk monitoring
-        
-        # Lanjut langsung ke akun berikutnya tanpa jeda
+        # ========== ANTI-RATE LIMITING DELAY ==========
+        # Tambahkan delay kecil antar akun untuk menghindari rate limiting
+        # Target: 19-20 detik per akun (termasuk delay ini)
+        if account_index < len(accounts) - 1:  # Tidak delay setelah akun terakhir
+            print("⏳ Menunggu sebentar untuk menghindari rate limiting...")
+            time.sleep(2.5)  # Delay 2.5 detik antar akun
     
     # === REKAP AKHIR ===
     print_final_summary(rekap, accounts, akun_durations, total_start)
