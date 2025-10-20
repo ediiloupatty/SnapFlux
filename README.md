@@ -22,7 +22,7 @@ Aplikasi ini mengotomatisasi login, navigasi, dan pengambilan laporan menggunaka
 - **Framework**: Selenium WebDriver
 - **Browser**: Chrome/Chromium (bundled)
 - **Data Export**: pandas + openpyxl
-- **Platform**: Cross-platform (Windows/Linux/macOS)
+- **Platform**: Windows
 
 ## 🚀 Quick Start
 
@@ -86,7 +86,7 @@ Edit `akun/akun.xlsx` dengan:
 
 ### Minimum
 
-- **OS**: Windows 10 (64-bit) / Linux / macOS
+- **OS**: Windows 10 (64-bit)
 - **Python**: 3.7+
 - **RAM**: 4 GB
 - **Storage**: 1–2 GB free space
@@ -94,7 +94,7 @@ Edit `akun/akun.xlsx` dengan:
 
 ### Recommended
 
-- **OS**: Windows 11 / Latest Linux / macOS
+- **OS**: Windows 11
 - **Python**: 3.9+
 - **RAM**: 8+ GB
 - **Storage**: SSD dengan ≥ 5 GB free space
