@@ -1,4 +1,4 @@
-# SnapFlux Automation v2
+# SnapFlux Automation v1.1.0
 
 Automation script untuk mengambil data transaksi dari platform Snapflux menggunakan Selenium WebDriver.
 
