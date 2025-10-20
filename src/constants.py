@@ -14,16 +14,6 @@ RESULTS_DIR = os.path.join(BASE_DIR, 'results')
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')
 LOG_FILE = os.path.join(LOGS_DIR, 'automation.log')
 
-# ========== KONFIGURASI PROXY ==========
-PROXY_CONFIG = {
-    'host': '43.159.20.117',
-    'port': '12233',
-    'username': 'user-EdiFOSPr-region-sg',
-    'password': 'FOS5610Proxy908',
-    'auth_username': 'EdiFOSPr',
-    'auth_password': 'FOS5610Proxy908'
-}
-
 # ========== KONSTANTA BULAN INDONESIA ==========
 BULAN_ID = [
     '', 'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',

@@ -6,7 +6,6 @@ import os
 import time
 import re
 import pandas as pd
-import requests
 import logging
 import queue
 import threading
@@ -14,7 +13,7 @@ from datetime import datetime
 from collections import Counter
 from logging.handlers import RotatingFileHandler
 
-from .constants import BASE_DIR, AKUN_DIR, RESULTS_DIR, LOGS_DIR, LOG_FILE, PROXY_CONFIG
+from .constants import BASE_DIR, AKUN_DIR, RESULTS_DIR, LOGS_DIR, LOG_FILE
 from .validators import is_valid_email, is_valid_phone, is_valid_pin
 
 # Setup logger untuk tracking error dan informasi debugging
@@ -34,26 +33,6 @@ def setup_logging():
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
-def check_bandwidth():
-    """Cek bandwidth proxy di https://faeyzaofficialstore.com/bandwidth"""
-    print("\n🌐 Mengecek bandwidth proxy...")
-    url = "https://faeyzaofficialstore.com/bandwidth"
-    proxy = {
-        'http': f'http://{PROXY_CONFIG["username"]}:{PROXY_CONFIG["password"]}@{PROXY_CONFIG["host"]}:{PROXY_CONFIG["port"]}',
-        'https': f'http://{PROXY_CONFIG["username"]}:{PROXY_CONFIG["password"]}@{PROXY_CONFIG["host"]}:{PROXY_CONFIG["port"]}',
-    }
-    try:
-        resp = requests.get(url, proxies=proxy, timeout=15, 
-                          auth=(PROXY_CONFIG["auth_username"], PROXY_CONFIG["auth_password"]))
-        if resp.status_code == 200:
-            print("✅ Bandwidth proxy terhubung!")
-            print(resp.text[:500])
-        else:
-            print(f"❌ Gagal cek bandwidth, status: {resp.status_code}")
-    except Exception as e:
-        print(f"❌ Error cek bandwidth: {e}")
-
 
 def load_accounts_from_excel(filename):
     """
