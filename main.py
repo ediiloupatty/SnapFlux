@@ -13,9 +13,22 @@ from datetime import datetime
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 # Import modul yang diperlukan
-from utils import *
-from driver_setup import setup_driver
-from login_handler import login_direct
+from src.utils import (
+    setup_logging, load_accounts_from_excel, print_account_stats,
+    get_main_menu_input, get_date_input, print_final_summary
+)
+import logging
+
+# Setup logger untuk tracking error
+logger = logging.getLogger('automation')
+from src.driver_setup import setup_driver
+from src.login_handler import login_direct
+from src.data_extractor import get_stock_value_direct, get_tabung_terjual_direct
+from src.navigation_handler import (
+    click_laporan_penjualan_direct, find_and_click_laporan_penjualan,
+    navigate_to_atur_produk, click_date_elements_direct
+)
+from src.excel_handler import save_to_excel_pivot_format
 
 def main():
     """
@@ -129,7 +142,6 @@ def main():
                 
                 # === TAHAP 2.5: AMBIL DATA STOK DARI DASHBOARD ===
                 print(f"📦 Mengambil data stok dari dashboard untuk {username}...")
-                from src.login_handler import get_stock_value_direct
                 stock_value = get_stock_value_direct(driver)
                 
                 if stock_value:
@@ -139,7 +151,6 @@ def main():
                 
                 # === TAHAP 2.6: NAVIGASI KE LAPORAN PENJUALAN (TERPADU) ===
                 print(f"📊 Navigasi ke Laporan Penjualan untuk {username}...")
-                from src.login_handler import click_laporan_penjualan_direct, find_and_click_laporan_penjualan
                 
                 # Coba metode langsung terlebih dahulu
                 laporan_success = click_laporan_penjualan_direct(driver)
@@ -157,7 +168,6 @@ def main():
                     
                     # Fallback: coba ke Atur Produk jika Laporan Penjualan gagal
                     print(f"🔧 Fallback: Navigasi ke Atur Produk untuk {username}...")
-                    from src.login_handler import navigate_to_atur_produk
                     atur_produk_success = navigate_to_atur_produk(driver)
                     
                     if atur_produk_success:
@@ -172,7 +182,6 @@ def main():
                     if selected_date:
                         print(f"📅 User telah input tanggal: {selected_date.strftime('%d %B %Y')}")
                         print(f"📅 Mengklik elemen tanggal di Laporan Penjualan untuk {username}...")
-                        from src.login_handler import click_date_elements_direct
                         date_elements_success = click_date_elements_direct(driver, selected_date)
                         
                         if date_elements_success:
@@ -188,7 +197,6 @@ def main():
                 
                 # === TAHAP 4: AMBIL DATA TABUNG TERJUAL ===
                 print(f"📊 Mengambil data tabung terjual dari laporan penjualan...")
-                from src.login_handler import get_tabung_terjual_direct
                 tabung_terjual = get_tabung_terjual_direct(driver)
                 
                 if tabung_terjual:
@@ -257,7 +265,6 @@ def main():
                         status = "Error Ambil Data"
                     
                     # Simpan ke Excel dengan format pivot baru (FORMAT UTAMA)
-                    from src.utils import save_to_excel_pivot_format
                     save_to_excel_pivot_format(
                         pangkalan_id=username,  # Gunakan username sebagai PANGKALAN_ID
                         nama_pangkalan=nama_pangkalan, 
