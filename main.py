@@ -44,6 +44,23 @@ def main():
     # Tampilkan statistik akun yang akan diproses
     print_account_stats(accounts)
     
+    # Minta input menu utama dari user
+    menu_choice = get_main_menu_input()
+    
+    # Handle menu choice
+    if menu_choice == 2:
+        print("\n🚧 === FITUR BATALKAN INPUTAN ===")
+        print("Program untuk fitur 'Batalkan Inputan' akan segera tersedia!")
+        print("Fitur ini akan memungkinkan untuk:")
+        print("- Membatalkan inputan yang sudah dilakukan")
+        print("- Reset data tertentu") 
+        print("- Dan fitur lainnya yang akan ditambahkan")
+        print("\n👋 Program selesai. Terima kasih!")
+        return
+    
+    # Jika menu_choice == 1 (Check Stok), lanjutkan ke proses normal
+    print("\n📊 Memulai proses Check Stok...")
+    
     # Minta input filter tanggal dari user (opsional)
     selected_date = get_date_input()
     
@@ -277,6 +294,15 @@ def main():
                 
                 account_success = True
                 
+            except KeyboardInterrupt:
+                print(f"\n⏹️ Program dihentikan saat memproses akun {username}")
+                print("🧹 Membersihkan resource...")
+                if driver:
+                    try:
+                        driver.quit()
+                    except:
+                        pass
+                return  # Exit dari function main
             except Exception as e:
                 alasan = f"Error dalam program percobaan ke-{retry_count + 1}: {str(e)}"
                 print(f"❌ Error dalam program untuk akun {username}: {str(e)}")
@@ -311,4 +337,31 @@ def main():
     print_final_summary(rekap, accounts, akun_durations, total_start)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n⏹️ Program dihentikan oleh user (Ctrl+C)")
+        print("🧹 Membersihkan resource...")
+        
+        # Cleanup any remaining browser instances
+        try:
+            import psutil
+            import subprocess
+            
+            # Kill any remaining chrome processes if needed
+            for proc in psutil.process_iter(['pid', 'name']):
+                if 'chrome' in proc.info['name'].lower() and 'selenium' in str(proc.cmdline()):
+                    try:
+                        proc.terminate()
+                    except:
+                        pass
+        except ImportError:
+            print("💡 Install psutil untuk cleanup otomatis: pip install psutil")
+        except Exception:
+            pass
+            
+        print("✅ Program berhasil dihentikan dengan bersih")
+        print("👋 Terima kasih!")
+    except Exception as e:
+        print(f"\n❌ Error tidak terduga: {str(e)}")
+        print("🧹 Membersihkan resource...")

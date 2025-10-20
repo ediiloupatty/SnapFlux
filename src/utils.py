@@ -166,6 +166,40 @@ def input_with_timeout(prompt, timeout):
     except queue.Empty:
         return ''
 
+def get_main_menu_input():
+    """Menu utama untuk memilih fitur program"""
+    while True:
+        try:
+            print("\n🎯 === MENU UTAMA SNAPFLUX ====")
+            print("Silakan pilih fitur yang ingin digunakan:")
+            print("1. Check Stok")
+            print("2. Batalkan Inputan")
+            print("(Otomatis pilih 1 jika tidak ada input dalam 15 detik)")
+            
+            menu_input = input_with_timeout("Pilihan Anda (1/2): ", 15).strip()
+            
+            if not menu_input:
+                print("⏭️ User tidak input menu - akan menggunakan Check Stok (default)")
+                return 1
+            
+            if menu_input not in ['1', '2']:
+                print("❌ Pilihan tidak valid! Silakan masukkan 1 atau 2")
+                continue
+            
+            choice = int(menu_input)
+            
+            if choice == 1:
+                print("✅ Dipilih: Check Stok")
+                return 1
+            elif choice == 2:
+                print("✅ Dipilih: Batalkan Inputan")
+                print("🚧 Fitur ini akan segera tersedia!")
+                return 2
+                
+        except Exception as e:
+            print(f"❌ Error input menu: {str(e)}")
+            continue
+
 def get_date_input():
     """Minta input tanggal dari user dengan validasi"""
     while True:
@@ -373,7 +407,7 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
             ws.cell(row=new_row, column=date_col_start + 2, value=timestamp)
         
         # Format headers dengan merge cell dan center alignment (tanpa bold atau background color)
-        from openpyxl.styles import Alignment
+        from openpyxl.styles import Alignment, Border, Side
         from openpyxl.utils import get_column_letter
         
         # Hanya center alignment untuk headers, tanpa bold atau background color
@@ -449,6 +483,23 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
                     pass
             adjusted_width = min(max_length + 2, 25)
             ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Apply border untuk semua cell
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'), 
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Terapkan border ke semua cell yang memiliki data
+        max_row = ws.max_row
+        max_col = ws.max_column
+        
+        for row in range(1, max_row + 1):
+            for col in range(1, max_col + 1):
+                cell = ws.cell(row=row, column=col)
+                cell.border = thin_border
         
         # Save workbook
         wb.save(filepath)
