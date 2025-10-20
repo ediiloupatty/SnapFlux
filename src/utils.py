@@ -341,11 +341,11 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
             ws.cell(row=1, column=2, value="NAMA_PANGKALAN")
             ws.cell(row=1, column=3, value=display_date)
             
-            # Row 2: (kosong) | (kosong) | STOK | INPUT | TIME
+            # Row 2: (kosong) | (kosong) | STOK (TABUNG) | INPUT (TABUNG) | TIME
             ws.cell(row=2, column=1, value="")
             ws.cell(row=2, column=2, value="")
-            ws.cell(row=2, column=3, value="STOK")
-            ws.cell(row=2, column=4, value="INPUT")
+            ws.cell(row=2, column=3, value="STOK (TABUNG)")
+            ws.cell(row=2, column=4, value="INPUT (TABUNG)")
             ws.cell(row=2, column=5, value="TIME")
             date_exists = True
         else:
@@ -361,14 +361,14 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
                 # Tambahkan kolom tanggal baru
                 date_col_start = ws.max_column + 1
                 ws.cell(row=1, column=date_col_start, value=display_date)
-                ws.cell(row=2, column=date_col_start, value="STOK")
-                ws.cell(row=2, column=date_col_start + 1, value="INPUT")
+                ws.cell(row=2, column=date_col_start, value="STOK (TABUNG)")
+                ws.cell(row=2, column=date_col_start + 1, value="INPUT (TABUNG)")
                 ws.cell(row=2, column=date_col_start + 2, value="TIME")
                 date_exists = True
             
             # Pastikan sub-header tersedia untuk tanggal yang sudah ada
-            ws.cell(row=2, column=date_col_start, value="STOK")
-            ws.cell(row=2, column=date_col_start + 1, value="INPUT")
+            ws.cell(row=2, column=date_col_start, value="STOK (TABUNG)")
+            ws.cell(row=2, column=date_col_start + 1, value="INPUT (TABUNG)")
             ws.cell(row=2, column=date_col_start + 2, value="TIME")
             
             # Cari row yang tepat untuk data ini
@@ -406,12 +406,59 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
             ws.cell(row=new_row, column=date_col_start + 1, value=inputan_int)
             ws.cell(row=new_row, column=date_col_start + 2, value=timestamp)
         
-        # Format headers dengan merge cell dan center alignment (tanpa bold atau background color)
-        from openpyxl.styles import Alignment, Border, Side
+        # Import untuk styling (sebelum digunakan)
+        from openpyxl.styles import Alignment, Border, Side, PatternFill
+        
+        # Apply conditional formatting untuk stok > 90 dan input = 0 (warna kuning)
+        target_row = None
+        if stok_int is not None and inputan_int is not None:
+            if stok_int > 90 and inputan_int == 0:
+                # Cari row yang tepat untuk conditional formatting
+                if not pangkalan_exists:
+                    # Row baru yang baru saja dibuat
+                    target_row = new_row
+                else:
+                    # Cari row yang di-update
+                    for row in range(3, ws.max_row + 1):
+                        if ws.cell(row=row, column=1).value == pangkalan_id:
+                            target_row = row
+                            break
+                
+                # Apply warna kuning untuk kondisi stok > 90 dan input = 0
+                if target_row:
+                    yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+                    ws.cell(row=target_row, column=date_col_start).fill = yellow_fill      # STOK
+                    ws.cell(row=target_row, column=date_col_start + 1).fill = yellow_fill  # INPUT
+                    print(f"🟡 Applied yellow highlight: STOK={stok_int} (>90) && INPUT={inputan_int} (=0)")
+        
+        # Format headers dengan merge cell dan center alignment dengan fill color berdasarkan hari
         from openpyxl.utils import get_column_letter
         
         # Hanya center alignment untuk headers, tanpa bold atau background color
         center_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Fungsi untuk menentukan warna berdasarkan hari dalam seminggu
+        def get_day_color(date_str):
+            """Return fill color berdasarkan hari dalam seminggu"""
+            try:
+                # Parse tanggal dari format YYYY-MM-DD
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                weekday = date_obj.weekday()  # 0=Monday, 1=Tuesday, ..., 6=Sunday
+                
+                # Warna untuk setiap hari dalam seminggu
+                day_colors = {
+                    0: "FFE6B3",  # Senin - Jingga muda
+                    1: "FFFFB3",  # Selasa - Kuning muda  
+                    2: "FFB3B3",  # Rabu - Merah muda
+                    3: "B3FFB3",  # Kamis - Hijau muda
+                    4: "B3E6FF",  # Jumat - Biru muda
+                    5: "E6B3FF",  # Sabtu - Ungu muda
+                    6: "FFCCFF"   # Minggu - Pink muda
+                }
+                
+                return day_colors.get(weekday, "FFFFFF")  # Default putih jika tidak ditemukan
+            except:
+                return "FFFFFF"  # Putih jika error parsing tanggal
         
         # Apply center alignment to row 1 dan 2 tanpa font bold atau background color
         for col in range(1, ws.max_column + 1):
@@ -444,8 +491,8 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
                         row2_col2 = ws.cell(row=2, column=col + 1).value
                         row2_col3 = ws.cell(row=2, column=col + 2).value
                         
-                        if (row2_col1 == "STOK" and 
-                            row2_col2 == "INPUT" and 
+                        if (row2_col1 == "STOK (TABUNG)" and 
+                            row2_col2 == "INPUT (TABUNG)" and 
                             row2_col3 == "TIME"):
                             date_start_cols.append(col)
         
@@ -454,7 +501,7 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
             end_col = min(start_col + 2, ws.max_column)
             date_groups.append((start_col, end_col))
         
-        # Apply merge untuk setiap grup tanggal
+        # Apply merge untuk setiap grup tanggal dengan fill color berdasarkan hari
         for start_col, end_col in date_groups:
             if end_col > start_col:
                 try:
@@ -465,11 +512,59 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
                     for clear_col in range(start_col + 1, end_col + 1):
                         ws.cell(row=1, column=clear_col).value = None
                     
-                    # Set alignment untuk cell yang di-merge (tanpa font bold atau background color)
+                    # Set alignment dan fill color untuk cell yang di-merge berdasarkan hari
                     merged_cell = ws.cell(row=1, column=start_col)
                     merged_cell.alignment = center_alignment
+                    
+                    # Dapatkan tanggal dari header untuk menentukan warna
+                    header_value = merged_cell.value
+                    if header_value and str(header_value).strip():
+                        # Ambil tanggal dari header cell
+                        date_str = str(header_value).strip()
+                        
+                        # Validasi apakah ini format tanggal YYYY-MM-DD
+                        if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+                            # Tentukan warna berdasarkan hari
+                            fill_color = get_day_color(date_str)
+                            
+                            # Apply fill color
+                            fill_pattern = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+                            merged_cell.fill = fill_pattern
+                            
+                            # Juga apply fill color ke sub-header di row 2
+                            for sub_col in range(start_col, end_col + 1):
+                                sub_header_cell = ws.cell(row=2, column=sub_col)
+                                sub_header_cell.fill = fill_pattern
+                            
+                            print(f"🎨 Applied color {fill_color} for date {date_str}")
+                        
                 except Exception as e:
                     print(f"⚠️ Warning: Failed to merge cells for date group {start_col}-{end_col}: {e}")
+        
+        # Pastikan semua header tanggal mendapat warna yang tepat (termasuk yang tidak di-merge)
+        for col in range(1, ws.max_column + 1):
+            header_cell = ws.cell(row=1, column=col)
+            header_value = header_cell.value
+            
+            if header_value and str(header_value).strip():
+                date_str = str(header_value).strip()
+                
+                # Validasi apakah ini format tanggal YYYY-MM-DD
+                if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+                    # Tentukan warna berdasarkan hari
+                    fill_color = get_day_color(date_str)
+                    fill_pattern = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+                    
+                    # Apply fill color ke header tanggal
+                    header_cell.fill = fill_pattern
+                    
+                    # Cari sub-header yang sesuai (3 kolom berikutnya: STOK, INPUT, TIME)
+                    for sub_col_offset in range(3):
+                        if col + sub_col_offset <= ws.max_column:
+                            sub_header_cell = ws.cell(row=2, column=col + sub_col_offset)
+                            sub_header_cell.fill = fill_pattern
+                    
+                    print(f"🎨 Applied color {fill_color} for date header {date_str} at column {col}")
         
         # Auto-adjust column widths
         for column in ws.columns:
@@ -484,6 +579,42 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
             adjusted_width = min(max_length + 2, 25)
             ws.column_dimensions[column_letter].width = adjusted_width
         
+        # Apply conditional formatting untuk semua data yang ada (stok > 90 dan input = 0)
+        max_row = ws.max_row
+        max_col = ws.max_column
+        yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+        
+        print("🔍 Checking for conditional formatting conditions...")
+        
+        # Cari semua kolom yang berisi data stok dan input
+        for col in range(1, max_col + 1):
+            # Cek apakah ini kolom STOK (TABUNG) atau INPUT (TABUNG)
+            row2_header = ws.cell(row=2, column=col).value
+            if row2_header == "STOK (TABUNG)":
+                # Ini kolom stok, cari kolom input yang bersebelahan (biasanya +1)
+                input_col = col + 1
+                if input_col <= max_col and ws.cell(row=2, column=input_col).value == "INPUT (TABUNG)":
+                    # Loop melalui semua data rows (mulai dari row 3)
+                    for row in range(3, max_row + 1):
+                        try:
+                            stok_value = ws.cell(row=row, column=col).value
+                            input_value = ws.cell(row=row, column=input_col).value
+                            
+                            # Cek kondisi: stok > 90 dan input = 0
+                            if stok_value is not None and input_value is not None:
+                                stok_num = int(stok_value) if isinstance(stok_value, (int, str)) and str(stok_value).isdigit() else None
+                                input_num = int(input_value) if isinstance(input_value, (int, str)) and str(input_value).isdigit() else None
+                                
+                                if stok_num is not None and input_num is not None:
+                                    if stok_num > 90 and input_num == 0:
+                                        # Apply warna kuning
+                                        ws.cell(row=row, column=col).fill = yellow_fill      # STOK
+                                        ws.cell(row=row, column=input_col).fill = yellow_fill # INPUT
+                                        print(f"🟡 Applied yellow highlight at row {row}: STOK={stok_num} (>90) && INPUT={input_num} (=0)")
+                        except (ValueError, TypeError):
+                            # Skip jika tidak bisa convert ke int
+                            continue
+        
         # Apply border untuk semua cell
         thin_border = Border(
             left=Side(style='thin'),
@@ -493,9 +624,6 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
         )
         
         # Terapkan border ke semua cell yang memiliki data
-        max_row = ws.max_row
-        max_col = ws.max_column
-        
         for row in range(1, max_row + 1):
             for col in range(1, max_col + 1):
                 cell = ws.cell(row=row, column=col)
