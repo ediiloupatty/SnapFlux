@@ -86,7 +86,7 @@ Edit `akun/akun.xlsx` dengan:
 
 ### Minimum
 
-- **OS**: Windows 10 (64-bit) / Linux / macOS
+- **OS**: Windows 10 (64-bit)
 - **Python**: 3.7+
 - **RAM**: 4 GB
 - **Storage**: 1–2 GB free space
