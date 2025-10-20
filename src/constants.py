@@ -3,6 +3,7 @@ Constants dan konfigurasi untuk automation script SnapFlux
 File ini berisi semua konstanta, URL, dan konfigurasi yang digunakan di seluruh aplikasi
 """
 import os
+from datetime import datetime
 
 # ========== KONFIGURASI URL ==========
 LOGIN_URL = "https://subsiditepatlpg.mypertamina.id/merchant-login"
@@ -41,7 +42,35 @@ HEADLESS_MODE = True
 PAGE_LOAD_TIMEOUT = 20
 IMPLICIT_WAIT = 5
 
-# ========== KONFIGURASI EXCEL ==========
+# ========== FUNGSI GENERATE EXCEL DYNAMIC ==========
+def get_excel_filename_dynamic(selected_date=None):
+    """
+    Generate nama file Excel dengan format: Data_Transaksi_Pangkalan_SnapFlux_tahun-bulan-tanggal.xlsx
+    """
+    if selected_date:
+        year = selected_date.year
+        month = selected_date.month
+        day = selected_date.day
+    else:
+        now = datetime.now()
+        year = now.year
+        month = now.month
+        day = now.day
+    
+    return f"Data_Transaksi_Pangkalan_SnapFlux_{year}-{month:02d}-{day:02d}.xlsx"
+
+def get_sheet_name_dynamic(selected_date=None):
+    """
+    Generate nama sheet berdasarkan bulan saat ini
+    """
+    if selected_date:
+        month = selected_date.month
+    else:
+        month = datetime.now().month
+    
+    return BULAN_ID[month]
+
+# ========== KONFIGURASI EXCEL (DEPRECATED - gunakan fungsi dynamic di atas) ==========
 EXCEL_FILENAME_PIVOT = "DATA_TRANSAKSI_SNAPFLUX_HISTORIS_PIVOT.xlsx"
 SHEET_NAME_PIVOT = "Pivot View"
 

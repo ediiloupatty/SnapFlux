@@ -9,7 +9,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 
-from .constants import RESULTS_DIR, BULAN_ID, DAY_COLORS, EXCEL_FILENAME_PIVOT, SHEET_NAME_PIVOT
+from .constants import RESULTS_DIR, BULAN_ID, DAY_COLORS, get_excel_filename_dynamic, get_sheet_name_dynamic
 from .validators import parse_stok_to_int, parse_inputan_to_int
 
 def get_excel_filename(selected_date=None):
@@ -36,8 +36,8 @@ def get_day_color(date_str):
 def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok_awal, total_inputan, status, selected_date=None):
     """Simpan data ke Excel dengan format pivot yang diminta user"""
     
-    # File untuk pivot format
-    filename = EXCEL_FILENAME_PIVOT
+    # File untuk pivot format menggunakan nama dynamic
+    filename = get_excel_filename_dynamic(selected_date)
     filepath = os.path.join(RESULTS_DIR, filename)
     
     try:
@@ -58,8 +58,14 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
         
         print(f"🔧 Parsing data: stok='{stok_awal}' -> {stok_int}, inputan='{total_inputan}' -> {inputan_int}")
         
+        # Generate sheet name dinamis berdasarkan bulan
+        sheet_name = get_sheet_name_dynamic(selected_date)
+        
+        print(f"📁 Menggunakan file: {filename}")
+        print(f"📋 Menggunakan sheet: {sheet_name}")
+        
         # Load existing Excel atau buat baru
-        wb, ws = _load_or_create_workbook(filepath)
+        wb, ws = _load_or_create_workbook(filepath, sheet_name)
         
         # Inisialisasi variabel
         date_exists = False
@@ -94,16 +100,16 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
         logger = logging.getLogger('automation')
         logger.error(f"Error saving to pivot Excel: {str(e)}", exc_info=True)
 
-def _load_or_create_workbook(filepath):
-    """Load existing workbook atau buat yang baru"""
+def _load_or_create_workbook(filepath, sheet_name):
+    """Load existing workbook atau buat yang baru dengan sheet name dinamis"""
     if os.path.exists(filepath):
         try:
             wb = load_workbook(filepath)
-            # Cek apakah sheet 'Pivot View' ada
-            if SHEET_NAME_PIVOT not in wb.sheetnames:
-                ws = wb.create_sheet(SHEET_NAME_PIVOT)
+            # Cek apakah sheet dengan nama dinamis ada
+            if sheet_name not in wb.sheetnames:
+                ws = wb.create_sheet(sheet_name)
             else:
-                ws = wb[SHEET_NAME_PIVOT]
+                ws = wb[sheet_name]
                 
         except Exception as e:
             print(f"⚠️ Error membaca file, akan buat file baru: {e}")
@@ -111,13 +117,13 @@ def _load_or_create_workbook(filepath):
             wb = Workbook()
             if 'Sheet' in wb.sheetnames:
                 wb.remove(wb['Sheet'])
-            ws = wb.create_sheet(SHEET_NAME_PIVOT)
+            ws = wb.create_sheet(sheet_name)
     else:
         # Buat workbook baru
         wb = Workbook()
         if 'Sheet' in wb.sheetnames:
             wb.remove(wb['Sheet'])
-        ws = wb.create_sheet(SHEET_NAME_PIVOT)
+        ws = wb.create_sheet(sheet_name)
     
     return wb, ws
 
