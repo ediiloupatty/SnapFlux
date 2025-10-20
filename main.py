@@ -53,8 +53,8 @@ def main():
     else:
         print(f"\n🚀 Memulai proses TANPA filter tanggal spesifik")
     
-    print("🌐 Program akan berjalan dengan browser window yang terlihat")
-    print("👀 Anda dapat melihat proses scraping secara realtime di browser")
+    print("🌐 Program akan berjalan dengan browser dalam mode headless")
+    print("⚡ Mode headless memberikan performa lebih cepat tanpa GUI")
     
     # Inisialisasi tracking waktu dan status
     total_start = time.time()  # Waktu mulai proses keseluruhan
@@ -69,9 +69,6 @@ def main():
         'gagal_stok': [],      # Akun yang gagal ambil data stok
         'error_lain': []       # Error lain yang tidak terduga
     }
-    
-    # Counter untuk tracking jumlah akun yang sudah selesai
-    completed_accounts = 0
     
     # Loop utama: proses setiap akun satu per satu
     for account_index, (nama, username, pin) in enumerate(accounts):
@@ -294,42 +291,12 @@ def main():
         akun_durations.append(akun_duration)
         print(f"⏱️ Waktu proses akun {username}: {akun_duration:.2f} detik\n")
         
-        # Increment completed accounts counter
-        completed_accounts += 1
+        # ========== CATATAN: LOGIC JEDA DITIADAKAN ==========
+        # Logic untuk jeda dan tutup browser setelah 3 akun telah dinonaktifkan
+        # untuk performa maksimal dan proses yang lebih cepat
+        # Browser akan tetap terbuka sepanjang proses untuk monitoring
         
-        # === LOGIC TUTUP TAB SETELAH AKUN KE-3 (DISABLED) ===
-        # Jeda setelah 3 akun dinonaktifkan untuk performa maksimal
-        # if completed_accounts % 3 == 0:
-        #     print(f"🎯 === {completed_accounts} akun selesai - MENUTUP TAB BROWSER ===")
-        #     
-        #     # Tutup tab browser saat ini
-        #     if driver:
-        #         print(f"📑 Menutup tab browser untuk akun {username}...")
-        #         try:
-        #             driver.close()  # Tutup tab saat ini, bukan seluruh browser
-        #             print("✅ Tab browser berhasil ditutup")
-        #         except Exception as e:
-        #             print(f"⚠️ Error menutup tab: {str(e)}")
-        #             # Jika gagal close tab, coba quit seluruh browser
-        #             try:
-        #                 driver.quit()
-        #                 print("✅ Browser berhasil ditutup sebagai fallback")
-        #             except:
-        #                 pass
-        #         finally:
-        #             driver = None
-        #     
-        #     # Beri delay random 25-30 detik
-        #     delay_seconds = random.uniform(24, 26)
-        #     print(f"⏳ Menunggu {delay_seconds:.1f} detik sebelum lanjut ke akun berikutnya...")
-        #     time.sleep(delay_seconds)
-        #     print("✅ Delay selesai, melanjutkan ke akun berikutnya...\n")
-        # else:
-        #     # Untuk akun selain kelipatan 3, browser tetap terbuka untuk monitoring
-        #     # (behavior sama seperti sebelumnya)
-        #     pass
-        
-        print("⚡ Jeda setelah 3 akun dinonaktifkan - melanjutkan langsung ke akun berikutnya")
+        # Lanjut langsung ke akun berikutnya tanpa jeda
     
     # === REKAP AKHIR ===
     print_final_summary(rekap, accounts, akun_durations, total_start)

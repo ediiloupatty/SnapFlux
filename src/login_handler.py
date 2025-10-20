@@ -32,7 +32,7 @@ def login_direct(username, pin):
     driver = None
     try:
         # Setup driver
-        driver = setup_driver(headless=False)
+        driver = setup_driver(headless=True)
         driver.get(LOGIN_URL)
         
         # Tunggu halaman loading
