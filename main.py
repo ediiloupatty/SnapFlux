@@ -237,12 +237,21 @@ def main():
                         tabung_terjual = "Tidak Ditemukan"
                         status = "Error Ambil Data"
                     
-                    # Simpan ke Excel dengan format baru
-                    from src.utils import save_to_excel_new_format
-                    save_to_excel_new_format(nama_pangkalan, tanggal_check, stock_value, tabung_terjual, status, selected_date)
+                    # Simpan ke Excel dengan format pivot baru (FORMAT UTAMA)
+                    from src.utils import save_to_excel_pivot_format
+                    save_to_excel_pivot_format(
+                        pangkalan_id=username,  # Gunakan username sebagai PANGKALAN_ID
+                        nama_pangkalan=nama_pangkalan, 
+                        tanggal_check=tanggal_check, 
+                        stok_awal=stock_value, 
+                        total_inputan=tabung_terjual, 
+                        status=status, 
+                        selected_date=selected_date
+                    )
                     
                     print(f"✅ Data berhasil disimpan ke Excel!")
                     print(f"   📝 Nama Pangkalan: {nama_pangkalan}")
+                    print(f"   🆔 Pangkalan ID: {username}")
                     print(f"   📅 Tanggal Check: {tanggal_check}")
                     print(f"   📦 Stok Awal: {stock_value}")
                     print(f"   📊 Total Inputan: {tabung_terjual}")
