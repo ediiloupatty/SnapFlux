@@ -8,12 +8,33 @@ from selenium.webdriver.chrome.service import Service
 import os
 import logging
 
+# Import enhanced error handling (backward compatible)
+try:
+    from .error_handler import handle_selenium_errors
+    from .exceptions import DriverSetupError
+    ENHANCED_ERROR_HANDLING = True
+except ImportError:
+    ENHANCED_ERROR_HANDLING = False
+
 # Setup logging untuk tracking error driver
 logger = logging.getLogger('driver_setup')
 
 # Konfigurasi path Chrome binary dan ChromeDriver (hardcoded untuk menghindari masalah import)
 CHROME_BINARY = r"D:\edi\Programing\Snapflux v2\chrome\Chromium\bin\chrome.exe"      # Path ke executable Chrome
 CHROMEDRIVER_PATH = r"D:\edi\Programing\Snapflux v2\chrome\chromedriver.exe"         # Path ke ChromeDriver executable
+
+# Enhanced configuration support (backward compatible)
+try:
+    from .config_manager import config_manager
+    def get_chrome_binary():
+        return config_manager.get('chrome_binary', CHROME_BINARY)
+    def get_chromedriver_path():
+        return config_manager.get('chromedriver_path', CHROMEDRIVER_PATH)
+except ImportError:
+    def get_chrome_binary():
+        return CHROME_BINARY
+    def get_chromedriver_path():
+        return CHROMEDRIVER_PATH
 
 def setup_driver(headless=False):
     """
@@ -105,16 +126,18 @@ def setup_driver(headless=False):
             options.add_argument("--window-size=1366,768")  # Kurangi dari 1920x1080 ke 1366x768
         
         # === CHROME BINARY PATH ===
-        if os.path.exists(CHROME_BINARY):
-            options.binary_location = CHROME_BINARY
-            print(f"✅ Menggunakan Chrome binary: {CHROME_BINARY}")
+        chrome_binary_path = get_chrome_binary()
+        if os.path.exists(chrome_binary_path):
+            options.binary_location = chrome_binary_path
+            print(f"✅ Menggunakan Chrome binary: {chrome_binary_path}")
         else:
             print("⚠️ Chrome binary tidak ditemukan, menggunakan default")
         
         # === CHROMEDRIVER SERVICE ===
-        if os.path.exists(CHROMEDRIVER_PATH):
-            service = Service(CHROMEDRIVER_PATH)
-            print(f"✅ Menggunakan ChromeDriver: {CHROMEDRIVER_PATH}")
+        chromedriver_path = get_chromedriver_path()
+        if os.path.exists(chromedriver_path):
+            service = Service(chromedriver_path)
+            print(f"✅ Menggunakan ChromeDriver: {chromedriver_path}")
         else:
             print("⚠️ ChromeDriver tidak ditemukan, menggunakan default")
             service = Service()
@@ -133,4 +156,12 @@ def setup_driver(headless=False):
     except Exception as e:
         print(f"❌ Error setup Chrome WebDriver: {str(e)}")
         logger.error(f"Error setup driver: {str(e)}", exc_info=True)
+        
+        # Enhanced error handling jika tersedia
+        if ENHANCED_ERROR_HANDLING:
+            try:
+                raise DriverSetupError(f"Failed to setup Chrome WebDriver: {str(e)}")
+            except DriverSetupError:
+                return None
+        
         return None

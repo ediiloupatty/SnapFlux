@@ -5,8 +5,25 @@ File ini berisi semua konstanta, URL, dan konfigurasi yang digunakan di seluruh 
 import os
 from datetime import datetime
 
+# Import config manager untuk enhanced configuration (backward compatible)
+try:
+    from .config_manager import config_manager
+    USE_ENHANCED_CONFIG = True
+except ImportError:
+    USE_ENHANCED_CONFIG = False
+
 # ========== KONFIGURASI URL ==========
 LOGIN_URL = "https://subsiditepatlpg.mypertamina.id/merchant-login"
+
+# Enhanced configuration dengan fallback ke hardcoded values
+def get_config_value(key: str, fallback_value):
+    """
+    Get configuration value dari enhanced config manager atau fallback ke hardcoded value
+    Maintains backward compatibility dengan existing code
+    """
+    if USE_ENHANCED_CONFIG:
+        return config_manager.get(key, fallback_value)
+    return fallback_value
 
 # ========== KONFIGURASI PATH DIREKTORI ==========
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -41,6 +58,11 @@ MAX_RETRIES = 3
 HEADLESS_MODE = True
 PAGE_LOAD_TIMEOUT = 20
 IMPLICIT_WAIT = 5
+
+# Enhanced configuration values dengan environment/fallback support
+# Usage: get_config_value('config_key', fallback_value)
+# Jika enhanced config tersedia, akan menggunakan environment variables atau config.yaml
+# Jika tidak, tetap menggunakan hardcoded values di atas (backward compatibility)
 
 # ========== FUNGSI GENERATE EXCEL DYNAMIC ==========
 def get_excel_filename_dynamic(selected_date=None):
