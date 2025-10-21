@@ -10,6 +10,13 @@ from .constants import LOGIN_URL, DEFAULT_DELAY
 from .selectors import LoginSelectors, InputSelectors
 from .driver_setup import setup_driver
 
+# Import enhanced configuration (backward compatible)
+try:
+    from .config_manager import config_manager
+    USE_ENHANCED_CONFIG = True
+except ImportError:
+    USE_ENHANCED_CONFIG = False
+
 logger = logging.getLogger('automation')
 
 def login_direct(username, pin):
@@ -28,8 +35,13 @@ def login_direct(username, pin):
     
     driver = None
     try:
-        # Setup driver
-        driver = setup_driver(headless=True)
+        # Setup driver dengan enhanced configuration
+        if USE_ENHANCED_CONFIG:
+            headless_mode = config_manager.get('headless_mode', True)
+        else:
+            headless_mode = True  # Default fallback
+        
+        driver = setup_driver(headless=headless_mode)
         driver.get(LOGIN_URL)
         
         # Tunggu halaman loading - ANTI-RATE LIMITING

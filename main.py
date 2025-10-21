@@ -19,6 +19,13 @@ from src.utils import (
 )
 import logging
 
+# Import enhanced configuration (backward compatible)
+try:
+    from src.config_manager import config_manager
+    USE_ENHANCED_CONFIG = True
+except ImportError:
+    USE_ENHANCED_CONFIG = False
+
 # Setup logger untuk tracking error
 logger = logging.getLogger('automation')
 from src.driver_setup import setup_driver
@@ -83,8 +90,18 @@ def main():
     else:
         print(f"\n🚀 Memulai proses TANPA filter tanggal spesifik")
     
-    print("🌐 Program akan berjalan dengan browser dalam mode headless")
-    print("⚡ Mode headless memberikan performa lebih cepat tanpa GUI")
+    # Check headless mode configuration
+    if USE_ENHANCED_CONFIG:
+        headless_mode = config_manager.get('headless_mode', True)
+    else:
+        headless_mode = True  # Default fallback
+    
+    if headless_mode:
+        print("🌐 Program akan berjalan dengan browser dalam mode headless")
+        print("⚡ Mode headless memberikan performa lebih cepat tanpa GUI")
+    else:
+        print("🖥️ Program akan berjalan dengan browser visible (mode GUI)")
+        print("👀 Anda dapat melihat aktivitas browser secara real-time")
     
     # Inisialisasi tracking waktu dan status
     total_start = time.time()  # Waktu mulai proses keseluruhan
