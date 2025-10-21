@@ -68,6 +68,7 @@ IMPLICIT_WAIT = 5
 def get_excel_filename_dynamic(selected_date=None):
     """
     Generate nama file Excel dengan format: Data_Transaksi_Pangkalan_SnapFlux_tahun-bulan-tanggal.xlsx
+    DEPRECATED - Gunakan get_master_filename() untuk sistem incremental
     """
     if selected_date:
         year = selected_date.year
@@ -81,16 +82,35 @@ def get_excel_filename_dynamic(selected_date=None):
     
     return f"Data_Transaksi_Pangkalan_SnapFlux_{year}-{month:02d}-{day:02d}.xlsx"
 
+def get_master_filename(selected_date=None):
+    """
+    Generate nama file Excel master dengan format: DATA_SNAPFLUX_MASTER_YYYY_BULAN.xlsx
+    File master incremental untuk sistem harian yang optimal
+    """
+    if selected_date:
+        year = selected_date.year
+        month = selected_date.month
+        month_name = BULAN_ID[month].upper()
+    else:
+        now = datetime.now()
+        year = now.year
+        month = now.month
+        month_name = BULAN_ID[month].upper()
+    
+    return f"DATA_SNAPFLUX_MASTER_{year}_{month_name}.xlsx"
+
 def get_sheet_name_dynamic(selected_date=None):
     """
     Generate nama sheet berdasarkan bulan saat ini
     """
     if selected_date:
         month = selected_date.month
+        year = selected_date.year
     else:
         month = datetime.now().month
+        year = datetime.now().year
     
-    return BULAN_ID[month]
+    return f"{BULAN_ID[month].upper()}_{year}"
 
 # ========== KONFIGURASI EXCEL (DEPRECATED - gunakan fungsi dynamic di atas) ==========
 EXCEL_FILENAME_PIVOT = "DATA_TRANSAKSI_SNAPFLUX_HISTORIS_PIVOT.xlsx"

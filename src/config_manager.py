@@ -44,9 +44,10 @@ class ConfigManager:
                         line = line.strip()
                         if line and not line.startswith('#') and '=' in line:
                             key, value = line.split('=', 1)
-                            # Remove quotes if present
-                            value = value.strip('"\'')
-                            os.environ[key.strip()] = value
+                            # Remove quotes if present and strip whitespace
+                            key = key.strip()
+                            value = value.strip('"\' \t\r\n')
+                            os.environ[key] = value
                 logger.info("Environment file loaded successfully")
             except Exception as e:
                 logger.warning(f"Failed to load .env file: {str(e)}")
@@ -91,12 +92,12 @@ class ConfigManager:
         self.config['retry_delay'] = float(self.get_env_with_fallback('RETRY_DELAY', '2.0'))
         self.config['error_delay'] = float(self.get_env_with_fallback('ERROR_DELAY', '1.0'))
         self.config['inter_account_delay'] = float(self.get_env_with_fallback('INTER_ACCOUNT_DELAY', '2.5'))
-        self.config['max_retries'] = int(self.get_env_with_fallback('MAX_RETRIES', '3'))
+        self.config['max_retries'] = self.get_env_int_with_fallback('MAX_RETRIES', 3)
         
         # Browser settings
-        self.config['headless_mode'] = self.get_env_with_fallback('HEADLESS_MODE', 'true').lower() == 'true'
-        self.config['page_load_timeout'] = int(self.get_env_with_fallback('PAGE_LOAD_TIMEOUT', '20'))
-        self.config['implicit_wait'] = int(self.get_env_with_fallback('IMPLICIT_WAIT', '5'))
+        self.config['headless_mode'] = self.get_env_with_fallback('HEADLESS_MODE', 'true').strip().lower() == 'true'
+        self.config['page_load_timeout'] = self.get_env_int_with_fallback('PAGE_LOAD_TIMEOUT', 20)
+        self.config['implicit_wait'] = self.get_env_int_with_fallback('IMPLICIT_WAIT', 5)
         
         # Logging configuration
         self.config['log_level'] = self.get_env_with_fallback('LOG_LEVEL', 'DEBUG')
@@ -107,6 +108,19 @@ class ConfigManager:
     def get_env_with_fallback(self, key: str, fallback: str) -> str:
         """Get environment variable dengan fallback value"""
         return os.getenv(key, fallback)
+    
+    def get_env_int_with_fallback(self, key: str, fallback: int) -> int:
+        """Get environment variable sebagai integer dengan fallback value"""
+        try:
+            value = os.getenv(key, str(fallback))
+            # Strip non-numeric characters from the end (like 'ss' in '5ss')
+            import re
+            numeric_value = re.match(r'^(\d+)', value.strip())
+            if numeric_value:
+                return int(numeric_value.group(1))
+            return fallback
+        except (ValueError, TypeError):
+            return fallback
     
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value dengan default fallback"""

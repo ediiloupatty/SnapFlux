@@ -37,9 +37,14 @@ def login_direct(username, pin):
     try:
         # Setup driver dengan enhanced configuration
         if USE_ENHANCED_CONFIG:
-            headless_mode = config_manager.get('headless_mode', True)
+            headless_mode = config_manager.get('headless_mode', False)  # Default false if config not available
         else:
-            headless_mode = True  # Default fallback
+            # Try to get from constants.py as fallback
+            try:
+                from .constants import HEADLESS_MODE
+                headless_mode = HEADLESS_MODE
+            except ImportError:
+                headless_mode = False  # Default to visible mode if everything fails
         
         driver = setup_driver(headless=headless_mode)
         driver.get(LOGIN_URL)

@@ -9,7 +9,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 
-from .constants import RESULTS_DIR, BULAN_ID, DAY_COLORS, get_excel_filename_dynamic, get_sheet_name_dynamic
+from .constants import RESULTS_DIR, BULAN_ID, DAY_COLORS, get_excel_filename_dynamic, get_sheet_name_dynamic, get_master_filename
 from .validators import parse_stok_to_int, parse_inputan_to_int
 
 def get_excel_filename(selected_date=None):
@@ -34,10 +34,10 @@ def get_day_color(date_str):
         return "FFFFFF"  # Putih jika error parsing tanggal
 
 def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok_awal, total_inputan, status, selected_date=None):
-    """Simpan data ke Excel dengan format pivot yang diminta user"""
+    """Simpan data ke Excel dengan format pivot incremental yang optimal"""
     
-    # File untuk pivot format menggunakan nama dynamic
-    filename = get_excel_filename_dynamic(selected_date)
+    # Gunakan file master untuk sistem incremental
+    filename = get_master_filename(selected_date)
     filepath = os.path.join(RESULTS_DIR, filename)
     
     try:
@@ -45,44 +45,46 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
         stok_int = parse_stok_to_int(stok_awal)
         inputan_int = parse_inputan_to_int(total_inputan)
         
-        # Format tanggal untuk header kolom sesuai permintaan user (tanpa ----)
+        # Tentukan tanggal untuk operasi
         if selected_date:
-            date_header = selected_date.strftime("%Y-%m-%d")
-            display_date = selected_date.strftime("%Y-%m-%d")
+            target_date = selected_date
         else:
-            date_header = datetime.now().strftime("%Y-%m-%d")
-            display_date = datetime.now().strftime("%Y-%m-%d")
+            target_date = datetime.now()
         
-        # Timestamp untuk TIME
-        timestamp = datetime.now().strftime("%H:%M")
+        # Timestamp untuk TIME dengan format AM/PM
+        timestamp = datetime.now().strftime("%I:%M %p")
         
         print(f"🔧 Parsing data: stok='{stok_awal}' -> {stok_int}, inputan='{total_inputan}' -> {inputan_int}")
         
         # Generate sheet name dinamis berdasarkan bulan
         sheet_name = get_sheet_name_dynamic(selected_date)
         
-        print(f"📁 Menggunakan file: {filename}")
+        print(f"📁 Menggunakan file master: {filename}")
         print(f"📋 Menggunakan sheet: {sheet_name}")
         
         # Load existing Excel atau buat baru
         wb, ws = _load_or_create_workbook(filepath, sheet_name)
         
-        # Inisialisasi variabel
-        date_exists = False
-        date_col_start = 3  # Default untuk file baru
-        data_start_row = 3  # Default untuk file baru
+        # **SISTEM INCREMENTAL BARU** - Cari atau buat kolom untuk tanggal ini
+        date_col_start, is_new_date_column = _find_or_create_date_column(ws, target_date)
         
-        # Setup headers dan cek apakah tanggal sudah ada
-        date_col_start, data_start_row = _setup_headers(ws, display_date, pangkalan_id)
+        # **SISTEM INCREMENTAL BARU** - Cari atau buat row untuk pangkalan ini
+        pangkalan_row, is_new_pangkalan = _find_or_create_pangkalan_row(ws, pangkalan_id, nama_pangkalan)
         
-        # Isi data sesuai format yang diminta
-        _fill_data(ws, pangkalan_id, nama_pangkalan, stok_int, inputan_int, timestamp, date_col_start, data_start_row)
+        # Update data langsung ke posisi yang tepat dengan center alignment
+        center_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Set data dengan center alignment untuk STOK, INPUT, TIME, dan STATUS
+        ws.cell(row=pangkalan_row, column=date_col_start, value=stok_int).alignment = center_alignment
+        ws.cell(row=pangkalan_row, column=date_col_start + 1, value=inputan_int).alignment = center_alignment
+        ws.cell(row=pangkalan_row, column=date_col_start + 2, value=timestamp).alignment = center_alignment
+        ws.cell(row=pangkalan_row, column=date_col_start + 3, value=status).alignment = center_alignment
         
         # Apply conditional formatting untuk stok > 90 dan input = 0 (warna kuning)
-        _apply_conditional_formatting(ws, stok_int, inputan_int, pangkalan_id, date_col_start)
+        _apply_conditional_formatting_new(ws, stok_int, inputan_int, pangkalan_row, date_col_start)
         
         # Format headers dengan merge cell dan center alignment dengan fill color berdasarkan hari
-        _format_headers(ws, display_date)
+        _format_headers_new(ws, target_date.strftime("%Y-%m-%d"))
         
         # Apply border untuk semua cell
         _apply_borders(ws)
@@ -90,9 +92,10 @@ def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok
         # Save workbook
         wb.save(filepath)
         
-        print(f"✅ Data berhasil disimpan ke pivot format: {filepath}")
+        print(f"✅ Data berhasil disimpan ke file master incremental: {filepath}")
         print(f"📋 Format: PANGKALAN_ID={pangkalan_id}, NAMA={nama_pangkalan}")
         print(f"📋 Data: STOK={stok_int}, INPUT={inputan_int}, TIME={timestamp}")
+        print(f"🎯 Sistem incremental aktif - data ditambahkan/updated tanpa overwrite")
         
     except Exception as e:
         print(f"❌ Error saat menyimpan pivot format: {str(e)}")
@@ -127,6 +130,60 @@ def _load_or_create_workbook(filepath, sheet_name):
     
     return wb, ws
 
+def _find_or_create_date_column(ws, target_date):
+    """
+    Cari kolom untuk tanggal tertentu, buat baru jika belum ada
+    Returns: (date_col_start, is_new_column)
+    """
+    display_date = target_date.strftime("%Y-%m-%d")
+    
+    # Cari kolom apakah sudah ada
+    for col in range(3, ws.max_column + 1):  # Mulai dari kolom 3 (setelah PANGKALAN_ID dan NAMA_PANGKALAN)
+        header_cell = ws.cell(row=1, column=col).value
+        if header_cell and str(header_cell) == display_date:
+            print(f"📅 Kolom tanggal {display_date} sudah ada di kolom {col}")
+            return col, False
+    
+    # Buat kolom baru jika belum ada
+    new_col = ws.max_column + 1
+    if ws.max_column < 3:  # File baru, mulai dari kolom 3
+        new_col = 3
+        # Pastikan header dasar sudah ada untuk file baru
+        if ws.cell(row=1, column=1).value is None or ws.cell(row=1, column=1).value == "":
+            ws.cell(row=1, column=1, value="PANGKALAN_ID")
+            ws.cell(row=1, column=2, value="NAMA_PANGKALAN")
+    
+    ws.cell(row=1, column=new_col, value=display_date)
+    ws.cell(row=2, column=new_col, value="STOK (TABUNG)")
+    ws.cell(row=2, column=new_col + 1, value="INPUT (TABUNG)") 
+    ws.cell(row=2, column=new_col + 2, value="TIME")
+    ws.cell(row=2, column=new_col + 3, value="STATUS")
+    
+    print(f"🆕 Membuat kolom baru untuk tanggal {display_date} di kolom {new_col}")
+    return new_col, True
+
+def _find_or_create_pangkalan_row(ws, pangkalan_id, nama_pangkalan):
+    """
+    Cari row untuk pangkalan tertentu, buat baru jika belum ada
+    Returns: (row_number, is_new_row)
+    """
+    # Cari apakah pangkalan sudah ada
+    for row in range(3, ws.max_row + 1):
+        if ws.cell(row=row, column=1).value == pangkalan_id:
+            print(f"📝 Pangkalan {pangkalan_id} sudah ada di baris {row}")
+            return row, False
+    
+    # Buat row baru jika belum ada
+    new_row = ws.max_row + 1
+    if ws.max_row < 2:  # File baru, mulai dari baris 3
+        new_row = 3
+    
+    ws.cell(row=new_row, column=1, value=pangkalan_id)
+    ws.cell(row=new_row, column=2, value=nama_pangkalan)
+    
+    print(f"🆕 Membuat baris baru untuk pangkalan {pangkalan_id} di baris {new_row}")
+    return new_row, True
+
 def _setup_headers(ws, display_date, pangkalan_id):
     """Setup headers dan return column start dan row start"""
     date_col_start = 3  # Default untuk file baru
@@ -140,12 +197,13 @@ def _setup_headers(ws, display_date, pangkalan_id):
         ws.cell(row=1, column=2, value="NAMA_PANGKALAN")
         ws.cell(row=1, column=3, value=display_date)
         
-        # Row 2: (kosong) | (kosong) | STOK (TABUNG) | INPUT (TABUNG) | TIME
+        # Row 2: (kosong) | (kosong) | STOK (TABUNG) | INPUT (TABUNG) | TIME | STATUS
         ws.cell(row=2, column=1, value="")
         ws.cell(row=2, column=2, value="")
         ws.cell(row=2, column=3, value="STOK (TABUNG)")
         ws.cell(row=2, column=4, value="INPUT (TABUNG)")
         ws.cell(row=2, column=5, value="TIME")
+        ws.cell(row=2, column=6, value="STATUS")
         return date_col_start, data_start_row
     else:
         # Cek apakah tanggal ini sudah ada di header
@@ -162,11 +220,13 @@ def _setup_headers(ws, display_date, pangkalan_id):
             ws.cell(row=2, column=date_col_start, value="STOK (TABUNG)")
             ws.cell(row=2, column=date_col_start + 1, value="INPUT (TABUNG)")
             ws.cell(row=2, column=date_col_start + 2, value="TIME")
+            ws.cell(row=2, column=date_col_start + 3, value="STATUS")
         else:
             # Pastikan sub-header tersedia untuk tanggal yang sudah ada
             ws.cell(row=2, column=date_col_start, value="STOK (TABUNG)")
             ws.cell(row=2, column=date_col_start + 1, value="INPUT (TABUNG)")
             ws.cell(row=2, column=date_col_start + 2, value="TIME")
+            ws.cell(row=2, column=date_col_start + 3, value="STATUS")
         
         # Cari row yang tepat untuk data ini
         for row in range(3, ws.max_row + 1):
@@ -218,6 +278,28 @@ def _apply_conditional_formatting(ws, stok_int, inputan_int, pangkalan_id, date_
                     print(f"🟡 Applied yellow highlight: STOK={stok_int} (>90) && INPUT={inputan_int} (=0)")
                     break
 
+def _apply_conditional_formatting_new(ws, stok_int, inputan_int, pangkalan_row, date_col_start):
+    """Apply conditional formatting - hanya kuning untuk STOK > 90 && INPUT = 0"""
+    if stok_int is not None and inputan_int is not None:
+        # Hanya satu kondisi: STOK > 90 dan INPUT = 0 (Kuning)
+        if stok_int > 90 and inputan_int == 0:
+            yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+            ws.cell(row=pangkalan_row, column=date_col_start).fill = yellow_fill      # STOK
+            ws.cell(row=pangkalan_row, column=date_col_start + 1).fill = yellow_fill  # INPUT
+            print(f"🟡 Applied yellow highlight: STOK={stok_int} (>90) && INPUT={inputan_int} (=0)")
+
+def _format_headers_new(ws, display_date):
+    """Format headers baru untuk sistem incremental"""
+    center_alignment = Alignment(horizontal="center", vertical="center")
+    
+    # Apply center alignment untuk semua headers
+    for col in range(1, ws.max_column + 1):
+        ws.cell(row=1, column=col).alignment = center_alignment
+        ws.cell(row=2, column=col).alignment = center_alignment
+    
+    # Merge cells untuk header tanggal yang baru ditambahkan
+    _merge_and_color_date_headers(ws, display_date, center_alignment)
+
 def _format_headers(ws, display_date):
     """Format headers dengan merge cell dan center alignment dengan fill color berdasarkan hari"""
     # Hanya center alignment untuk headers, tanpa bold atau background color
@@ -246,20 +328,22 @@ def _merge_and_color_date_headers(ws, display_date, center_alignment):
             is_not_basic_header = str(header_cell) not in ["PANGKALAN_ID", "NAMA_PANGKALAN"]
             
             if is_date_header or (is_not_basic_header and col > 2):
-                # Cek apakah ini kolom pertama dari grup (harus diikuti STOK, INPUT, TIME di row 2)
-                if col + 2 <= ws.max_column:
+                # Cek apakah ini kolom pertama dari grup (harus diikuti STOK, INPUT, TIME, STATUS di row 2)
+                if col + 3 <= ws.max_column:
                     row2_col1 = ws.cell(row=2, column=col).value
                     row2_col2 = ws.cell(row=2, column=col + 1).value
                     row2_col3 = ws.cell(row=2, column=col + 2).value
+                    row2_col4 = ws.cell(row=2, column=col + 3).value
                     
                     if (row2_col1 == "STOK (TABUNG)" and 
                         row2_col2 == "INPUT (TABUNG)" and 
-                        row2_col3 == "TIME"):
+                        row2_col3 == "TIME" and
+                        row2_col4 == "STATUS"):
                         date_start_cols.append(col)
     
     # Apply merge dan color untuk setiap grup tanggal
     for start_col in date_start_cols:
-        end_col = min(start_col + 2, ws.max_column)
+        end_col = min(start_col + 3, ws.max_column)  # 4 kolom: STOK, INPUT, TIME, STATUS
         if end_col > start_col:
             try:
                 # Merge cell di row 1 untuk header tanggal
@@ -269,30 +353,11 @@ def _merge_and_color_date_headers(ws, display_date, center_alignment):
                 for clear_col in range(start_col + 1, end_col + 1):
                     ws.cell(row=1, column=clear_col).value = None
                 
-                # Set alignment dan fill color untuk cell yang di-merge berdasarkan hari
+                # Set alignment untuk cell yang di-merge (tanpa warna)
                 merged_cell = ws.cell(row=1, column=start_col)
                 merged_cell.alignment = center_alignment
                 
-                # Dapatkan tanggal dari header untuk menentukan warna
-                header_value = merged_cell.value
-                if header_value and str(header_value).strip():
-                    date_str = str(header_value).strip()
-                    
-                    # Validasi apakah ini format tanggal YYYY-MM-DD
-                    if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
-                        # Tentukan warna berdasarkan hari
-                        fill_color = get_day_color(date_str)
-                        
-                        # Apply fill color
-                        fill_pattern = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-                        merged_cell.fill = fill_pattern
-                        
-                        # Juga apply fill color ke sub-header di row 2
-                        for sub_col in range(start_col, end_col + 1):
-                            sub_header_cell = ws.cell(row=2, column=sub_col)
-                            sub_header_cell.fill = fill_pattern
-                        
-                        print(f"🎨 Applied color {fill_color} for date {date_str}")
+                print(f"✅ Merged header untuk kolom {start_col}-{end_col}")
                         
             except Exception as e:
                 print(f"⚠️ Warning: Failed to merge cells for date group {start_col}-{end_col}: {e}")
@@ -329,10 +394,11 @@ def _apply_borders(ws):
     _apply_all_conditional_formatting(ws)
 
 def _apply_all_conditional_formatting(ws):
-    """Apply conditional formatting untuk semua data yang ada"""
+    """Apply conditional formatting dan center alignment untuk semua data yang ada"""
     max_row = ws.max_row
     max_col = ws.max_column
     yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+    center_alignment = Alignment(horizontal="center", vertical="center")
     
     print("🔍 Checking for conditional formatting conditions...")
     
@@ -343,10 +409,24 @@ def _apply_all_conditional_formatting(ws):
         if row2_header == "STOK (TABUNG)":
             # Ini kolom stok, cari kolom input yang bersebelahan (biasanya +1)
             input_col = col + 1
-            if input_col <= max_col and ws.cell(row=2, column=input_col).value == "INPUT (TABUNG)":
-                # Loop melalui semua data rows (mulai dari row 3)
-                for row in range(3, max_row + 1):
-                    try:
+            time_col = col + 2  # Kolom TIME
+            status_col = col + 3  # Kolom STATUS
+            
+            # Loop melalui semua data rows (mulai dari row 3)
+            for row in range(3, max_row + 1):
+                try:
+                    # Apply center alignment untuk semua data (STOK, INPUT, TIME, STATUS)
+                    if col <= max_col:
+                        ws.cell(row=row, column=col).alignment = center_alignment      # STOK
+                    if input_col <= max_col and ws.cell(row=2, column=input_col).value == "INPUT (TABUNG)":
+                        ws.cell(row=row, column=input_col).alignment = center_alignment # INPUT
+                    if time_col <= max_col:
+                        ws.cell(row=row, column=time_col).alignment = center_alignment   # TIME
+                    if status_col <= max_col and ws.cell(row=2, column=status_col).value == "STATUS":
+                        ws.cell(row=row, column=status_col).alignment = center_alignment # STATUS
+                    
+                    # Conditional formatting untuk STOK dan INPUT
+                    if input_col <= max_col and ws.cell(row=2, column=input_col).value == "INPUT (TABUNG)":
                         stok_value = ws.cell(row=row, column=col).value
                         input_value = ws.cell(row=row, column=input_col).value
                         
@@ -361,9 +441,9 @@ def _apply_all_conditional_formatting(ws):
                                     ws.cell(row=row, column=col).fill = yellow_fill      # STOK
                                     ws.cell(row=row, column=input_col).fill = yellow_fill # INPUT
                                     print(f"🟡 Applied yellow highlight at row {row}: STOK={stok_num} (>90) && INPUT={input_num} (=0)")
-                    except (ValueError, TypeError):
-                        # Skip jika tidak bisa convert ke int
-                        continue
+                except (ValueError, TypeError):
+                    # Skip jika tidak bisa convert ke int
+                    continue
 
 def save_to_excel_new_format(nama_pangkalan, tanggal_check, stok_awal, total_inputan, status, selected_date=None, pangkalan_id=None):
     """Simpan data ke Excel dengan format baru (backward compatibility)"""

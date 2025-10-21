@@ -87,7 +87,7 @@ def setup_driver(headless=False):
         
         # === OPTIMASI MEMORI DAN CPU ===
         options.add_argument("--memory-pressure-off")
-        options.add_argument("--max_old_space_size=2048")  # Kurangi dari 4096 ke 2048
+        options.add_argument("--max_old_space_size=1024")  # Kurangi dari 4096 ke 2048
         options.add_argument("--disable-background-networking")
         options.add_argument("--disable-default-apps")
         options.add_argument("--disable-sync")
