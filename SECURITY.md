@@ -17,7 +17,7 @@ If you discover a security vulnerability in SnapFlux v2, please report it respon
 
 ### How to Report
 
-1. **Email**: Send details to [your-email@domain.com]
+1. **Email**: Send details to ediloupatty@gmail.com
 2. **GitHub Issues**: Create a private issue (if you have access)
 3. **Direct Contact**: Contact the maintainer directly
 
