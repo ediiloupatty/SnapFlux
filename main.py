@@ -114,7 +114,9 @@ def main():
         'gagal_navigasi': [],  # Akun yang gagal navigasi
         'gagal_waktu': [],     # Akun yang timeout
         'gagal_stok': [],      # Akun yang gagal ambil data stok
-        'error_lain': []       # Error lain yang tidak terduga
+        'error_lain': [],      # Error lain yang tidak terduga
+        'gagal_masuk_akun': [], # Akun yang mengalami "Gagal Masuk Akun" (dengan retry)
+        'gagal_masuk_akun_count': 0  # Counter total "Gagal Masuk Akun" yang terjadi
     }
     
     # Loop utama: proses setiap akun satu per satu
@@ -136,11 +138,19 @@ def main():
                 print(f"🔄 Percobaan ke-{retry_count} untuk akun {username}")
                 # Optimasi: Hanya delay jika ini retry (bukan percobaan pertama)
                 if retry_count > 1:  # retry_count dimulai dari 1, jadi >1 berarti retry
-                    time.sleep(2)  # Kurangi dari 5 ke 2 detik, hanya untuk retry
+                    time.sleep(3)  # Naik dari 2 ke 3 detik untuk retry
                 
                 # ========== TAHAP 1: LOGIN AWAL (VALIDASI) ==========
                 print(f"🔐 Memulai login validasi untuk akun {username}...")
-                driver = login_direct(username, pin)  # Panggil fungsi login langsung
+                login_result = login_direct(username, pin)  # Panggil fungsi login langsung
+                driver = login_result[0]  # WebDriver object
+                login_info = login_result[1]  # Info gagal masuk akun
+                
+                # Track gagal masuk akun
+                if login_info['gagal_masuk_akun']:
+                    rekap['gagal_masuk_akun'].append((username, f"Gagal Masuk Akun (retry berhasil)"))
+                    rekap['gagal_masuk_akun_count'] += login_info['count']
+                    print(f"📊 Gagal Masuk Akun terdeteksi untuk {username} - Total: {rekap['gagal_masuk_akun_count']}")
                 
                 if not driver:
                     alasan = f"Login gagal percobaan ke-{retry_count + 1}"
@@ -156,6 +166,9 @@ def main():
                 print(f"✅ Login validasi berhasil untuk {username}. Driver sudah siap digunakan...")
                 
                 # Driver sudah berhasil login dari tahap sebelumnya
+                # Tambahkan delay untuk stabilitas setelah login
+                print("⏳ Menunggu stabilitas setelah login...")
+                time.sleep(2.0)  # Delay 2 detik untuk stabilitas
                 
                 # === TAHAP 2.5: AMBIL DATA STOK DARI DASHBOARD ===
                 print(f"📦 Mengambil data stok dari dashboard untuk {username}...")
@@ -165,6 +178,8 @@ def main():
                     print(f"✅ Data stok berhasil diambil: {stock_value}")
                 else:
                     print("⚠️ Data stok tidak ditemukan atau gagal diambil")
+                    # Track gagal ambil stok
+                    rekap['gagal_stok'].append((username, "Gagal ambil data stok dari dashboard"))
                 
                 # === TAHAP 2.6: NAVIGASI KE LAPORAN PENJUALAN (TERPADU) ===
                 print(f"📊 Navigasi ke Laporan Penjualan untuk {username}...")
@@ -193,6 +208,8 @@ def main():
                     else:
                         print("⚠️ Gagal navigasi ke Atur Produk juga...")
                         navigation_success = False
+                        # Track gagal navigasi
+                        rekap['gagal_navigasi'].append((username, "Gagal navigasi ke Laporan Penjualan dan Atur Produk"))
                 
                 # === TAHAP 3.5: KLIK ELEMEN TANGGAL DI LAPORAN PENJUALAN (HANYA JIKA USER INPUT TANGGAL) ===
                 if navigation_success:
@@ -220,6 +237,12 @@ def main():
                     print(f"✅ Data tabung terjual berhasil diambil: {tabung_terjual}")
                 else:
                     print("⚠️ Data tabung terjual tidak ditemukan atau gagal diambil")
+                    # Track gagal ambil data tabung terjual
+                    rekap['gagal_navigasi'].append((username, "Gagal ambil data tabung terjual"))
+                
+                # Tambahkan delay setelah pengambilan data untuk stabilitas
+                print("⏳ Menunggu stabilitas setelah pengambilan data...")
+                time.sleep(1.5)  # Delay 1.5 detik untuk stabilitas
                 
                 # === TAHAP 4.5: DECISION REKAP PENJUALAN (DISABLED UNTUK SAAT INI) ===
                 # print(f"🤔 Decision: Apakah perlu klik Rekap Penjualan untuk {username}?")
@@ -306,6 +329,8 @@ def main():
                 except Exception as e:
                     alasan = f"Error simpan data Excel percobaan ke-{retry_count + 1}: {str(e)}"
                     print(f"❌ Error simpan data Excel: {str(e)}")
+                    # Track error simpan Excel
+                    rekap['error_lain'].append((username, f"Error simpan Excel: {str(e)}"))
                     retry_count += 1
                     if retry_count >= max_retries:
                         rekap['gagal_navigasi'].append((username, alasan))
@@ -341,7 +366,7 @@ def main():
                     break
                 else:
                     print(f"🔄 Akan mencoba ulang untuk akun {username}...")
-                    time.sleep(1)  # Kurangi dari 2 ke 1 detik
+                    time.sleep(2)  # Naik dari 1 ke 2 detik untuk error retry
             
             finally:
                 # Browser management akan dilakukan di bawah setelah logic delay
@@ -350,14 +375,27 @@ def main():
         akun_end = time.time()
         akun_duration = akun_end - akun_start
         akun_durations.append(akun_duration)
-        print(f"⏱️ Waktu proses akun {username}: {akun_duration:.2f} detik\n")
+        print(f"⏱️ Waktu proses akun {username}: {akun_duration:.2f} detik")
+        
+        # Track timeout jika proses terlalu lama (>60 detik)
+        if akun_duration > 60:
+            rekap['gagal_waktu'].append((username, f"Timeout - proses terlalu lama ({akun_duration:.1f} detik)"))
+            print(f"⚠️ Timeout terdeteksi untuk {username}: {akun_duration:.1f} detik")
+        
+        print()  # Baris kosong untuk pemisahan
         
         # ========== ANTI-RATE LIMITING DELAY ==========
-        # Tambahkan delay kecil antar akun untuk menghindari rate limiting
-        # Target: 19-20 detik per akun (termasuk delay ini)
+        # Tambahkan delay antar akun untuk menghindari rate limiting
+        # Target: 20-25 detik per akun (termasuk delay ini)
         if account_index < len(accounts) - 1:  # Tidak delay setelah akun terakhir
             print("⏳ Menunggu sebentar untuk menghindari rate limiting...")
-            time.sleep(2.5)  # Delay 2.5 detik antar akun
+            
+            # Delay khusus setiap 5 akun untuk menghindari web limiter
+            if (account_index + 1) % 5 == 0:  # Setiap 5 akun (akun ke-5, 10, 15, dst)
+                print("🚨 Delay ekstra setiap 5 akun untuk menghindari web limiter...")
+                time.sleep(8.0)  # Delay ekstra 8 detik setiap 5 akun
+            else:
+                time.sleep(4.0)  # Delay normal 4.0 detik antar akun
     
     # === REKAP AKHIR ===
     print_final_summary(rekap, accounts, akun_durations, total_start)

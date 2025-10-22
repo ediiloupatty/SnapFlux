@@ -228,6 +228,11 @@ def print_final_summary(rekap, accounts, akun_durations, total_start):
         for uname, reason in rekap['gagal_stok']:
             print(f"  ⚠️ {uname}: {reason}")
     
+    print(f"Gagal Masuk Akun (dengan retry): {len(rekap['gagal_masuk_akun'])} akun")
+    if rekap['gagal_masuk_akun']:
+        for uname, reason in rekap['gagal_masuk_akun']:
+            print(f"  🔄 {uname}: {reason}")
+    
     print(f"Error Lain: {len(rekap['error_lain'])} akun")
     if rekap['error_lain']:
         for uname, reason in rekap['error_lain']:
@@ -243,3 +248,31 @@ def print_final_summary(rekap, accounts, akun_durations, total_start):
     print(f"Success Rate: {success_rate:.1f}%")
     print(f"Akun yang berhasil diproses: {len(rekap['sukses'])}")
     print(f"Akun yang gagal: {total_accounts - len(rekap['sukses'])}")
+    
+    # Statistik khusus untuk Gagal Masuk Akun
+    if 'gagal_masuk_akun_count' in rekap and rekap['gagal_masuk_akun_count'] > 0:
+        print(f"\n🔄 STATISTIK GAGAL MASUK AKUN:")
+        print(f"Total kejadian 'Gagal Masuk Akun': {rekap['gagal_masuk_akun_count']}")
+        print(f"Akun yang mengalami 'Gagal Masuk Akun': {len(rekap['gagal_masuk_akun'])}")
+        print(f"Rata-rata kejadian per akun: {rekap['gagal_masuk_akun_count'] / len(rekap['gagal_masuk_akun']):.1f}")
+    
+    # Summary error breakdown
+    total_errors = (len(rekap['gagal_login']) + len(rekap['gagal_navigasi']) + 
+                   len(rekap['gagal_waktu']) + len(rekap['gagal_stok']) + 
+                   len(rekap['error_lain']))
+    
+    if total_errors > 0:
+        print(f"\n📋 BREAKDOWN ERROR:")
+        print(f"🔐 Gagal Login: {len(rekap['gagal_login'])}")
+        print(f"🧭 Gagal Navigasi: {len(rekap['gagal_navigasi'])}")
+        print(f"⏰ Timeout: {len(rekap['gagal_waktu'])}")
+        print(f"📦 Gagal Ambil Stok: {len(rekap['gagal_stok'])}")
+        print(f"❌ Error Lain: {len(rekap['error_lain'])}")
+        print(f"🔄 Gagal Masuk Akun (retry): {len(rekap['gagal_masuk_akun'])}")
+        
+        if 'gagal_masuk_akun_count' in rekap and rekap['gagal_masuk_akun_count'] > 0:
+            print(f"\n🔄 DETAIL GAGAL MASUK AKUN:")
+            print(f"Total kejadian 'Gagal Masuk Akun': {rekap['gagal_masuk_akun_count']}")
+            print(f"Akun yang mengalami 'Gagal Masuk Akun': {len(rekap['gagal_masuk_akun'])}")
+            if len(rekap['gagal_masuk_akun']) > 0:
+                print(f"Rata-rata kejadian per akun: {rekap['gagal_masuk_akun_count'] / len(rekap['gagal_masuk_akun']):.1f}")

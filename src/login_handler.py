@@ -29,7 +29,10 @@ def login_direct(username, pin):
         pin (str): PIN untuk authentication
         
     Returns:
-        webdriver.Chrome: WebDriver object jika login berhasil, None jika gagal
+        tuple: (webdriver.Chrome, dict) - WebDriver object dan info gagal masuk akun
+               Jika login berhasil: (driver, {'gagal_masuk_akun': False, 'count': 0})
+               Jika login gagal: (None, {'gagal_masuk_akun': False, 'count': 0})
+               Jika ada gagal masuk akun: (driver, {'gagal_masuk_akun': True, 'count': 1})
     """
     print(f"\n🔐 === LOGIN LANGSUNG UNTUK {username} ===")
     
@@ -173,7 +176,7 @@ def login_direct(username, pin):
             
             if not retry_clicked:
                 print("❌ Gagal mengklik tombol MASUK lagi")
-                return None
+                return None, {'gagal_masuk_akun': gagal_masuk_detected, 'count': 1}
             
             # Tunggu proses login kedua - OPTIMIZED
             print("⏳ Menunggu proses login kedua...")
@@ -183,13 +186,13 @@ def login_direct(username, pin):
         current_url = driver.current_url
         if "merchant-login" not in current_url:
             print("✅ Login berhasil!")
-            return driver
+            return driver, {'gagal_masuk_akun': gagal_masuk_detected, 'count': 1 if gagal_masuk_detected else 0}
         else:
             print("❌ Login gagal - masih di halaman login")
-            return None
+            return None, {'gagal_masuk_akun': gagal_masuk_detected, 'count': 1 if gagal_masuk_detected else 0}
         
     except Exception as e:
         print(f"❌ Error dalam login: {str(e)}")
         if driver:
             driver.quit()
-        return None
+        return None, {'gagal_masuk_akun': False, 'count': 0}

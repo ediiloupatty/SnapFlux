@@ -48,10 +48,10 @@ CHROME_BINARY = r"D:\edi\Programing\Snapflux v2\chrome\Chromium\bin\chrome.exe"
 CHROMEDRIVER_PATH = r"D:\edi\Programing\Snapflux v2\chrome\chromedriver.exe"
 
 # ========== KONFIGURASI TIMING ==========
-DEFAULT_DELAY = 2.0
-RETRY_DELAY = 2.0
-ERROR_DELAY = 1.0
-INTER_ACCOUNT_DELAY = 2.5
+DEFAULT_DELAY = 3.0  # Naik dari 2.0 ke 3.0 detik untuk stabilitas
+RETRY_DELAY = 3.0    # Naik dari 2.0 ke 3.0 detik untuk retry
+ERROR_DELAY = 2.0    # Naik dari 1.0 ke 2.0 detik untuk error handling
+INTER_ACCOUNT_DELAY = 4.0  # Naik dari 2.5 ke 4.0 detik untuk anti-rate limiting
 MAX_RETRIES = 3
 
 # ========== KONFIGURASI BROWSER ==========

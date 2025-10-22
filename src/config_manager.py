@@ -88,10 +88,10 @@ class ConfigManager:
         )
         
         # Timing configuration
-        self.config['default_delay'] = float(self.get_env_with_fallback('DEFAULT_DELAY', '2.0'))
-        self.config['retry_delay'] = float(self.get_env_with_fallback('RETRY_DELAY', '2.0'))
-        self.config['error_delay'] = float(self.get_env_with_fallback('ERROR_DELAY', '1.0'))
-        self.config['inter_account_delay'] = float(self.get_env_with_fallback('INTER_ACCOUNT_DELAY', '2.5'))
+        self.config['default_delay'] = float(self.get_env_with_fallback('DEFAULT_DELAY', '3.0'))
+        self.config['retry_delay'] = float(self.get_env_with_fallback('RETRY_DELAY', '3.0'))
+        self.config['error_delay'] = float(self.get_env_with_fallback('ERROR_DELAY', '2.0'))
+        self.config['inter_account_delay'] = float(self.get_env_with_fallback('INTER_ACCOUNT_DELAY', '4.0'))
         self.config['max_retries'] = self.get_env_int_with_fallback('MAX_RETRIES', 3)
         
         # Browser settings
