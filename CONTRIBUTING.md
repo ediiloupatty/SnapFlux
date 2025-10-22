@@ -1,4 +1,4 @@
-# Contributing to SnapFlux v2
+Contributing to SnapFlux v2
 
 Terima kasih atas minat Anda untuk berkontribusi pada SnapFlux v2! Kami menyambut kontribusi dari semua orang yang ingin membantu meningkatkan project ini.
 
