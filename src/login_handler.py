@@ -549,7 +549,7 @@ def get_customer_list_direct(driver, pin):
                                                 # Kembali ke halaman sebelumnya tanpa klik transaksi
                                                 driver.back()
                                                 time.sleep(2.0)
-                                                break
+                                                continue  # Lanjut ke customer berikutnya
                                             
                                             # Focus hanya pada "Rumah Tangga"
                                             rumah_tangga_data = transaksi_per_jenis.get('Rumah Tangga')
@@ -557,7 +557,11 @@ def get_customer_list_direct(driver, pin):
                                                 print(f"   🎯 Focus pada Rumah Tangga: {rumah_tangga_data['jumlah_tabung']} tabung")
                                                 
                                                 # Klik transaksi Rumah Tangga pertama dan batalkan
-                                                click_rumah_tangga_transaction(driver, pin)
+                                                cancel_result = click_rumah_tangga_transaction(driver, pin)
+                                                if cancel_result:
+                                                    print(f"   ✅ Berhasil membatalkan transaksi untuk {customer['name']}")
+                                                else:
+                                                    print(f"   ❌ Gagal membatalkan transaksi untuk {customer['name']}")
                                                 
                                             # Tampilkan summary untuk jenis lain
                                             for jenis, data in transaksi_per_jenis.items():
@@ -567,7 +571,7 @@ def get_customer_list_direct(driver, pin):
                                     # Kembali ke halaman sebelumnya
                                     driver.back()
                                     time.sleep(2.0)
-                                    break
+                                    continue  # Lanjut ke customer berikutnya
                         except Exception as e:
                             print(f"❌ Error mengklik {customer['name']}: {str(e)}")
                             continue
