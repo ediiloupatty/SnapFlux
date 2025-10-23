@@ -149,7 +149,7 @@ def run_batalkan_inputan(accounts, selected_date):
             print(f"👥 Mengambil data list pembeli dari Rekap Penjualan untuk {username}...")
             
             from src.login_handler import get_customer_list_direct
-            customer_list = get_customer_list_direct(driver)
+            customer_list = get_customer_list_direct(driver, pin)
             
             if customer_list:
                 print(f"\n📋 === LIST PEMBELI UNTUK {username} ({nama}) ===")

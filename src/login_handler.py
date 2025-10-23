@@ -412,14 +412,15 @@ def click_rekap_penjualan_direct(driver):
         return False
 
 
-def get_customer_list_direct(driver):
+def get_customer_list_direct(driver, pin):
     """
     Mengambil data list pembeli dari halaman Rekap Penjualan dengan pola yang sudah diketahui
     Berdasarkan debugging: Struktur Nama → HP/NIK → "Jenis Pelanggan" → "X Tabung LPG 3Kg"
-    Jika pembeli membeli >1 tabung, akan diklik untuk melihat detail
+    Jika pembeli membeli >1 tabung, akan diklik untuk melihat detail dan membatalkan transaksi
     
     Args:
         driver: WebDriver object yang sudah berada di halaman Rekap Penjualan
+        pin: PIN dari akun yang sedang login
         
     Returns:
         list: List nama pembeli dengan format "Nama Lengkap (Nomor HP/NIK) - X Tabung", atau None jika gagal
@@ -536,18 +537,32 @@ def get_customer_list_direct(driver):
                                         print(f"   - Total Pembelian: {detail_info.get('total_pembelian', 'N/A')}")
                                         print(f"   - Riwayat Transaksi: {len(detail_info.get('riwayat', []))} transaksi")
                                         
-                                        # Tampilkan analisis jenis pembelian
-                                        summary = detail_info.get('summary', {})
-                                        if summary:
-                                            print(f"   📊 Analisis Jenis Pembelian:")
-                                            print(f"      - Total Transaksi: {summary.get('total_transaksi', 0)}")
-                                            print(f"      - Rumah Tangga: {summary.get('rumah_tangga', 0)} kali")
-                                            print(f"      - Usaha Mikro: {summary.get('usaha_mikro', 0)} kali")
-                                            print(f"      - Usaha Kecil: {summary.get('usaha_kecil', 0)} kali")
-                                            print(f"      - Usaha Menengah: {summary.get('usaha_menengah', 0)} kali")
-                                            print(f"      - Usaha Besar: {summary.get('usaha_besar', 0)} kali")
-                                            if summary.get('lainnya', 0) > 0:
-                                                print(f"      - Lainnya: {summary.get('lainnya', 0)} kali")
+                                        # Tampilkan summary sederhana jenis pembelian
+                                        transaksi_per_jenis = detail_info.get('transaksi_per_jenis', {})
+                                        
+                                        if transaksi_per_jenis:
+                                            print(f"   📊 Summary Pembelian:")
+                                            
+                                            # Cek apakah ada "Usaha Mikro" - jika ya, skip
+                                            if 'Usaha Mikro' in transaksi_per_jenis:
+                                                print(f"   ⏭️ Skip {customer['name']} - Jenis Usaha Mikro")
+                                                # Kembali ke halaman sebelumnya tanpa klik transaksi
+                                                driver.back()
+                                                time.sleep(2.0)
+                                                break
+                                            
+                                            # Focus hanya pada "Rumah Tangga"
+                                            rumah_tangga_data = transaksi_per_jenis.get('Rumah Tangga')
+                                            if rumah_tangga_data and rumah_tangga_data['jumlah_transaksi'] > 1:
+                                                print(f"   🎯 Focus pada Rumah Tangga: {rumah_tangga_data['jumlah_tabung']} tabung")
+                                                
+                                                # Klik transaksi Rumah Tangga pertama dan batalkan
+                                                click_rumah_tangga_transaction(driver, pin)
+                                                
+                                            # Tampilkan summary untuk jenis lain
+                                            for jenis, data in transaksi_per_jenis.items():
+                                                if jenis != 'Rumah Tangga':
+                                                    print(f"      {customer['name']}: {data['jumlah_tabung']} tabung - {jenis}")
                                     
                                     # Kembali ke halaman sebelumnya
                                     driver.back()
@@ -573,6 +588,454 @@ def get_customer_list_direct(driver):
     except Exception as e:
         print(f"❌ Error dalam mengambil data pembeli: {str(e)}")
         return None
+
+
+def click_rumah_tangga_transaction(driver, pin):
+    """
+    Mengklik transaksi Rumah Tangga pertama untuk masuk ke halaman detail transaksi
+    Menggunakan berbagai metode pencarian untuk memastikan berhasil
+    Kemudian melakukan pembatalan transaksi
+    
+    Args:
+        driver: WebDriver object yang sudah berada di halaman detail pelanggan
+        pin: PIN dari akun yang sedang login
+        
+    Returns:
+        bool: True jika berhasil klik transaksi dan batalkan, False jika gagal
+    """
+    try:
+        print(f"🖱️ Mencari dan mengklik transaksi Rumah Tangga...")
+        
+        # Tunggu halaman load
+        time.sleep(2.0)
+        
+        # Debug: Tampilkan informasi halaman saat ini
+        current_url = driver.current_url
+        print(f"🔍 Debug: URL saat ini: {current_url}")
+        
+        # Metode 1: Cari elemen dengan teks "Rumah Tangga" dan klik parent
+        print(f"🔍 Debug: Metode 1 - Mencari elemen 'Rumah Tangga'...")
+        rumah_tangga_elements = driver.find_elements(By.XPATH, "//*[text()='Rumah Tangga']")
+        print(f"🔍 Debug: Ditemukan {len(rumah_tangga_elements)} elemen 'Rumah Tangga'")
+        
+        for i, element in enumerate(rumah_tangga_elements):
+            try:
+                print(f"🔍 Debug: Elemen {i+1}: Tag={element.tag_name}, Class={element.get_attribute('class')}")
+                
+                # Coba klik parent element
+                parent = element.find_element(By.XPATH, "..")
+                if parent.is_displayed() and parent.is_enabled():
+                    print(f"🖱️ Mengklik parent element dari Rumah Tangga (metode 1)...")
+                    parent.click()
+                    time.sleep(3.0)
+                    
+                    # Verifikasi navigasi dan lakukan pembatalan
+                    if verify_transaction_detail_page(driver):
+                        # Lakukan pembatalan transaksi
+                        cancel_result = cancel_transaction(driver, pin)
+                        return cancel_result
+                        
+            except Exception as e:
+                print(f"🔍 Debug: Error dengan elemen {i+1}: {str(e)}")
+                continue
+        
+        # Metode 2: Cari elemen yang mengandung "Tabung LPG" dan "Rumah Tangga"
+        print(f"🔍 Debug: Metode 2 - Mencari elemen dengan 'Tabung LPG' dan 'Rumah Tangga'...")
+        tabung_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Tabung LPG')]")
+        print(f"🔍 Debug: Ditemukan {len(tabung_elements)} elemen 'Tabung LPG'")
+        
+        for i, element in enumerate(tabung_elements):
+            try:
+                element_text = element.text.strip()
+                print(f"🔍 Debug: Elemen {i+1}: '{element_text[:100]}...'")
+                
+                if 'Rumah Tangga' in element_text and element.is_displayed() and element.is_enabled():
+                    print(f"🖱️ Mengklik elemen Tabung LPG dengan Rumah Tangga (metode 2)...")
+                    element.click()
+                    time.sleep(3.0)
+                    
+                    if verify_transaction_detail_page(driver):
+                        # Lakukan pembatalan transaksi
+                        cancel_result = cancel_transaction(driver, pin)
+                        return cancel_result
+                        
+            except Exception as e:
+                print(f"🔍 Debug: Error dengan elemen Tabung LPG {i+1}: {str(e)}")
+                continue
+        
+        # Metode 3: Cari elemen dengan harga "Rp19" dan "Rumah Tangga"
+        print(f"🔍 Debug: Metode 3 - Mencari elemen dengan 'Rp19' dan 'Rumah Tangga'...")
+        harga_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Rp19')]")
+        print(f"🔍 Debug: Ditemukan {len(harga_elements)} elemen 'Rp19'")
+        
+        for i, element in enumerate(harga_elements):
+            try:
+                element_text = element.text.strip()
+                print(f"🔍 Debug: Elemen {i+1}: '{element_text[:100]}...'")
+                
+                if 'Rumah Tangga' in element_text and element.is_displayed() and element.is_enabled():
+                    print(f"🖱️ Mengklik elemen harga dengan Rumah Tangga (metode 3)...")
+                    element.click()
+                    time.sleep(3.0)
+                    
+                    if verify_transaction_detail_page(driver):
+                        # Lakukan pembatalan transaksi
+                        cancel_result = cancel_transaction(driver, pin)
+                        return cancel_result
+                        
+            except Exception as e:
+                print(f"🔍 Debug: Error dengan elemen harga {i+1}: {str(e)}")
+                continue
+        
+        # Metode 4: Cari semua elemen yang bisa diklik dan cek isinya
+        print(f"🔍 Debug: Metode 4 - Mencari semua elemen yang bisa diklik...")
+        clickable_elements = driver.find_elements(By.XPATH, "//*[@onclick or @href or contains(@class, 'click') or contains(@class, 'btn') or contains(@class, 'card')]")
+        print(f"🔍 Debug: Ditemukan {len(clickable_elements)} elemen yang bisa diklik")
+        
+        for i, element in enumerate(clickable_elements[:10]):  # Batasi untuk performa
+            try:
+                element_text = element.text.strip()
+                if len(element_text) > 20 and 'Rumah Tangga' in element_text:
+                    print(f"🔍 Debug: Elemen clickable {i+1}: '{element_text[:100]}...'")
+                    
+                    if element.is_displayed() and element.is_enabled():
+                        print(f"🖱️ Mengklik elemen clickable dengan Rumah Tangga (metode 4)...")
+                        element.click()
+                        time.sleep(3.0)
+                        
+                        if verify_transaction_detail_page(driver):
+                            return True
+                            
+            except Exception as e:
+                print(f"🔍 Debug: Error dengan elemen clickable {i+1}: {str(e)}")
+                continue
+        
+        print(f"❌ Semua metode gagal menemukan transaksi Rumah Tangga yang bisa diklik")
+        return False
+        
+    except Exception as e:
+        print(f"❌ Error mengklik transaksi Rumah Tangga: {str(e)}")
+        return False
+
+
+def verify_transaction_detail_page(driver):
+    """
+    Verifikasi apakah sudah masuk ke halaman detail transaksi
+    
+    Args:
+        driver: WebDriver object
+        
+    Returns:
+        bool: True jika sudah di halaman detail transaksi, False jika belum
+    """
+    try:
+        # Tunggu halaman load
+        time.sleep(2.0)
+        
+        # Cek URL dan page source
+        current_url = driver.current_url
+        page_source = driver.page_source.lower()
+        
+        print(f"🔍 Debug: URL setelah klik: {current_url}")
+        print(f"🔍 Debug: Page source contains 'informasi transaksi': {'informasi transaksi' in page_source}")
+        print(f"🔍 Debug: Page source contains 'rincian': {'rincian' in page_source}")
+        print(f"🔍 Debug: Page source contains 'pembayaran': {'pembayaran' in page_source}")
+        print(f"🔍 Debug: Page source contains 'total pembayaran': {'total pembayaran' in page_source}")
+        
+        # Verifikasi berdasarkan berbagai indikator
+        if ("informasi transaksi" in page_source or 
+            "rincian" in page_source or
+            "pembayaran" in page_source or
+            "total pembayaran" in page_source or
+            "item pembelian" in page_source):
+            print(f"✅ Berhasil masuk ke halaman detail transaksi!")
+            return True
+        else:
+            print(f"⚠️ Tidak berhasil masuk ke halaman detail transaksi")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error verifikasi halaman detail transaksi: {str(e)}")
+        return False
+
+
+def cancel_transaction(driver, pin):
+    """
+    Membatalkan transaksi dengan langkah-langkah:
+    1. Klik "Rincian"
+    2. Klik "Batalkan"
+    3. Klik "YA, BATALKAN TRANSAKSI"
+    4. Isi alasan pembatalan: "Salah Inputan"
+    5. Isi PIN
+    6. Klik "BATALKAN TRANSAKSI"
+    
+    Args:
+        driver: WebDriver object yang sudah berada di halaman detail transaksi
+        pin: PIN dari akun yang sedang login
+        
+    Returns:
+        bool: True jika berhasil membatalkan transaksi, False jika gagal
+    """
+    try:
+        print(f"🔄 Memulai proses pembatalan transaksi...")
+        
+        # Ambil informasi detail transaksi terlebih dahulu
+        get_transaction_detail_info(driver)
+        
+        # Langkah 1: Klik "Rincian" terlebih dahulu
+        print(f"🔍 Langkah 1: Mencari dan mengklik 'Rincian'...")
+        rincian_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Rincian')]")
+        
+        rincian_clicked = False
+        for i, element in enumerate(rincian_elements):
+            try:
+                element_text = element.text.strip()
+                print(f"🔍 Debug Rincian {i+1}: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                
+                if element_text == "Rincian" and element.is_displayed() and element.is_enabled():
+                    print(f"🖱️ Mengklik 'Rincian'...")
+                    print(f"🔍 Debug Rincian Success: XPath='//*[contains(text(), 'Rincian')][{i+1}]'")
+                    element.click()
+                    time.sleep(2.0)
+                    rincian_clicked = True
+                    break
+            except Exception as e:
+                print(f"🔍 Debug Rincian Error {i+1}: {str(e)}")
+                continue
+        
+        if not rincian_clicked:
+            print(f"❌ Tidak ditemukan tombol 'Rincian'")
+            return False
+        
+        # Langkah 2: Cari dan klik tombol "Batalkan"
+        print(f"🔍 Langkah 2: Mencari tombol 'Batalkan'...")
+        
+        # Cari tombol "Batalkan" dengan berbagai cara
+        batalkan_selectors = [
+            "//*[contains(text(), 'Batalkan')]",
+            "//*[text()='Batalkan']",
+            "//button[contains(text(), 'Batalkan')]",
+            "//div[contains(text(), 'Batalkan')]",
+            "//span[contains(text(), 'Batalkan')]"
+        ]
+        
+        batalkan_clicked = False
+        for selector in batalkan_selectors:
+            try:
+                batalkan_elements = driver.find_elements(By.XPATH, selector)
+                print(f"🔍 Debug: Selector '{selector}' menemukan {len(batalkan_elements)} elemen")
+                
+                for j, element in enumerate(batalkan_elements):
+                    try:
+                        element_text = element.text.strip()
+                        print(f"🔍 Debug Batalkan {j+1}: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                        
+                        # Cek apakah ini tombol "BATALKAN" yang benar
+                        if (element_text == "BATALKAN" and 
+                            element.is_displayed() and 
+                            element.is_enabled()):
+                            print(f"🖱️ Mengklik tombol 'BATALKAN'...")
+                            print(f"🔍 Debug Batalkan Success: XPath='{selector}[{j+1}]'")
+                            
+                            # Scroll ke elemen untuk memastikan terlihat
+                            driver.execute_script("arguments[0].scrollIntoView(true);", element)
+                            time.sleep(1.0)
+                            
+                            # Coba klik dengan JavaScript jika normal click gagal
+                            try:
+                                element.click()
+                                print(f"✅ Berhasil mengklik dengan normal click")
+                            except Exception as click_error:
+                                print(f"⚠️ Normal click gagal, mencoba JavaScript click: {str(click_error)}")
+                                driver.execute_script("arguments[0].click();", element)
+                                print(f"✅ Berhasil mengklik dengan JavaScript click")
+                            
+                            time.sleep(2.0)
+                            batalkan_clicked = True
+                            break
+                    except Exception as e:
+                        print(f"🔍 Debug Batalkan Error {j+1}: {str(e)}")
+                        continue
+                        
+                if batalkan_clicked:
+                    break
+                    
+            except Exception as e:
+                print(f"🔍 Debug: Error dengan selector '{selector}': {str(e)}")
+                continue
+        
+        if not batalkan_clicked:
+            print(f"❌ Tidak ditemukan tombol 'Batalkan'")
+            return False
+        
+        # Langkah 3: Cari dan klik "YA, BATALKAN TRANSAKSI"
+        print(f"🔍 Langkah 3: Mencari tombol 'YA, BATALKAN TRANSAKSI'...")
+        ya_batalkan_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'YA, BATALKAN TRANSAKSI')]")
+        
+        ya_batalkan_clicked = False
+        for i, element in enumerate(ya_batalkan_elements):
+            try:
+                element_text = element.text.strip()
+                print(f"🔍 Debug YA Batalkan {i+1}: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                
+                if element.is_displayed() and element.is_enabled():
+                    print(f"🖱️ Mengklik 'YA, BATALKAN TRANSAKSI'...")
+                    print(f"🔍 Debug YA Batalkan Success: XPath='//*[contains(text(), 'YA, BATALKAN TRANSAKSI')][{i+1}]'")
+                    element.click()
+                    time.sleep(2.0)
+                    ya_batalkan_clicked = True
+                    break
+            except Exception as e:
+                print(f"🔍 Debug YA Batalkan Error {i+1}: {str(e)}")
+                continue
+        
+        if not ya_batalkan_clicked:
+            print(f"❌ Tidak ditemukan tombol 'YA, BATALKAN TRANSAKSI'")
+            return False
+        
+        # Langkah 4: Isi alasan pembatalan "Salah Inputan"
+        print(f"🔍 Langkah 4: Mengisi alasan pembatalan 'Salah Inputan'...")
+        alasan_elements = driver.find_elements(By.XPATH, "//input[@type='text'] | //textarea")
+        
+        alasan_filled = False
+        for i, element in enumerate(alasan_elements):
+            try:
+                element_type = element.get_attribute('type')
+                element_placeholder = element.get_attribute('placeholder')
+                element_name = element.get_attribute('name')
+                print(f"🔍 Debug Alasan {i+1}: Type='{element_type}', Placeholder='{element_placeholder}', Name='{element_name}', Tag={element.tag_name}, Class={element.get_attribute('class')}")
+                
+                if element.is_displayed() and element.is_enabled():
+                    element.clear()
+                    element.send_keys("Salah Inputan")
+                    print(f"✅ Alasan pembatalan berhasil diisi: 'Salah Inputan'")
+                    print(f"🔍 Debug Alasan Success: XPath='(//input[@type='text'] | //textarea)[{i+1}]'")
+                    alasan_filled = True
+                    break
+            except Exception as e:
+                print(f"🔍 Debug Alasan Error {i+1}: {str(e)}")
+                continue
+        
+        if not alasan_filled:
+            print(f"❌ Tidak ditemukan field alasan pembatalan")
+            return False
+        
+        # Langkah 5: Isi PIN
+        print(f"🔍 Langkah 5: Mengisi PIN: {pin}...")
+        pin_elements = driver.find_elements(By.XPATH, "//input[@type='password']")
+        
+        pin_filled = False
+        for i, element in enumerate(pin_elements):
+            try:
+                element_placeholder = element.get_attribute('placeholder')
+                element_name = element.get_attribute('name')
+                print(f"🔍 Debug PIN {i+1}: Placeholder='{element_placeholder}', Name='{element_name}', Tag={element.tag_name}, Class={element.get_attribute('class')}")
+                
+                if element.is_displayed() and element.is_enabled():
+                    element.clear()
+                    element.send_keys(pin)
+                    print(f"✅ PIN berhasil diisi: {pin}")
+                    print(f"🔍 Debug PIN Success: XPath='//input[@type='password'][{i+1}]'")
+                    pin_filled = True
+                    break
+            except Exception as e:
+                print(f"🔍 Debug PIN Error {i+1}: {str(e)}")
+                continue
+        
+        if not pin_filled:
+            print(f"❌ Tidak ditemukan field PIN")
+            return False
+        
+        # Langkah 6: Klik "BATALKAN TRANSAKSI"
+        print(f"🔍 Langkah 6: Mencari tombol 'BATALKAN TRANSAKSI'...")
+        batalkan_transaksi_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'BATALKAN TRANSAKSI')]")
+        
+        batalkan_transaksi_clicked = False
+        for i, element in enumerate(batalkan_transaksi_elements):
+            try:
+                element_text = element.text.strip()
+                print(f"🔍 Debug Batalkan Transaksi {i+1}: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                
+                if element.is_displayed() and element.is_enabled():
+                    print(f"🖱️ Mengklik 'BATALKAN TRANSAKSI'...")
+                    print(f"🔍 Debug Batalkan Transaksi Success: XPath='//*[contains(text(), 'BATALKAN TRANSAKSI')][{i+1}]'")
+                    element.click()
+                    time.sleep(3.0)
+                    batalkan_transaksi_clicked = True
+                    break
+            except Exception as e:
+                print(f"🔍 Debug Batalkan Transaksi Error {i+1}: {str(e)}")
+                continue
+        
+        if not batalkan_transaksi_clicked:
+            print(f"❌ Tidak ditemukan tombol 'BATALKAN TRANSAKSI'")
+            return False
+        
+        # Verifikasi apakah transaksi berhasil dibatalkan
+        page_source = driver.page_source.lower()
+        if "berhasil" in page_source or "dibatalkan" in page_source or "sukses" in page_source:
+            print(f"✅ Transaksi berhasil dibatalkan!")
+            return True
+        else:
+            print(f"⚠️ Status pembatalan tidak jelas")
+            return False
+        
+    except Exception as e:
+        print(f"❌ Error membatalkan transaksi: {str(e)}")
+        return False
+
+
+def get_transaction_detail_info(driver):
+    """
+    Mengambil informasi detail dari halaman transaksi
+    
+    Args:
+        driver: WebDriver object yang sudah berada di halaman detail transaksi
+    """
+    try:
+        print(f"📋 Mengambil detail informasi transaksi...")
+        
+        # Tunggu halaman load
+        time.sleep(2.0)
+        
+        # Ambil semua teks dari halaman
+        all_elements = driver.find_elements(By.XPATH, "//*[text()]")
+        all_texts = []
+        
+        for element in all_elements:
+            text = element.text.strip()
+            if text and len(text) > 1:
+                all_texts.append(text)
+        
+        # Cari informasi penting
+        transaction_info = {}
+        
+        for i, text in enumerate(all_texts):
+            # Cari nama pelanggan (biasanya di bagian atas)
+            if len(text) > 5 and text[0].isupper() and not text.startswith(('Rp', 'LPG', 'Tabung')):
+                if 'Jaga' in text or len(text.split()) >= 2:
+                    transaction_info['nama'] = text
+                    print(f"   👤 Nama: {text}")
+            
+            # Cari nomor telepon (format: 08xxxxxxxxxx)
+            elif text.startswith('08') and len(text) >= 10:
+                transaction_info['telepon'] = text
+                print(f"   📞 Telepon: {text}")
+            
+            # Cari status pembayaran
+            elif text in ['LUNAS', 'BELUM LUNAS', 'PENDING']:
+                transaction_info['status'] = text
+                print(f"   💰 Status: {text}")
+            
+            # Cari harga
+            elif text.startswith('Rp') and '19' in text:
+                transaction_info['harga'] = text
+                print(f"   💵 Harga: {text}")
+        
+        print(f"✅ Detail transaksi berhasil diambil!")
+        
+    except Exception as e:
+        print(f"❌ Error mengambil detail transaksi: {str(e)}")
 
 
 def get_customer_detail_info(driver):
@@ -619,7 +1082,7 @@ def get_customer_detail_info(driver):
             elif "Total Pembelian Tabung" in text and i + 1 < len(all_texts):
                 detail_info['total_pembelian'] = all_texts[i + 1]
         
-        # Cari riwayat transaksi dan analisis jenis pembelian
+        # Cari riwayat transaksi dan analisis jenis pembelian dengan penggabungan
         riwayat_transaksi = []
         jenis_pembelian_count = {
             'Rumah Tangga': 0,
@@ -630,11 +1093,20 @@ def get_customer_detail_info(driver):
             'Lainnya': 0
         }
         
+        # Dictionary untuk menyimpan detail transaksi per jenis
+        transaksi_per_jenis = {}
+        
+        # Debug: Tampilkan semua teks untuk analisis
+        print(f"🔍 Debug: Menganalisis {len(all_texts)} teks untuk jenis pembelian...")
+        
         # Cari bagian "Riwayat Transaksi"
         riwayat_started = False
+        current_transaksi = {}
+        
         for i, text in enumerate(all_texts):
             if "Riwayat Transaksi" in text:
                 riwayat_started = True
+                print(f"🔍 Debug: Riwayat Transaksi ditemukan di index {i}")
                 continue
             
             if riwayat_started:
@@ -642,24 +1114,55 @@ def get_customer_detail_info(driver):
                 if text and len(text) > 5:
                     riwayat_transaksi.append(text)
                     
-                    # Analisis jenis pembelian
-                    if text in jenis_pembelian_count:
-                        jenis_pembelian_count[text] += 1
-                    elif any(keyword in text.lower() for keyword in ['rumah tangga', 'usaha mikro', 'usaha kecil', 'usaha menengah', 'usaha besar']):
-                        # Jika ada jenis pembelian yang tidak terdaftar
-                        jenis_pembelian_count['Lainnya'] += 1
+                    # Deteksi jumlah tabung dari teks seperti "2 Tabung LPG 3 Kg"
+                    import re
+                    tabung_match = re.search(r'(\d+)\s+Tabung LPG', text)
+                    if tabung_match:
+                        jumlah_tabung = int(tabung_match.group(1))
+                        current_transaksi['jumlah_tabung'] = jumlah_tabung
+                        print(f"🔍 Debug: Ditemukan {jumlah_tabung} Tabung LPG")
+                    
+                    # Deteksi jenis pembelian
+                    if text in ['Rumah Tangga', 'Usaha Mikro', 'Usaha Kecil', 'Usaha Menengah', 'Usaha Besar']:
+                        jenis_pembelian = text
+                        current_transaksi['jenis'] = jenis_pembelian
+                        
+                        # Gabungkan dengan transaksi sebelumnya jika jenis sama
+                        if jenis_pembelian in transaksi_per_jenis:
+                            transaksi_per_jenis[jenis_pembelian]['jumlah_tabung'] += current_transaksi.get('jumlah_tabung', 1)
+                            transaksi_per_jenis[jenis_pembelian]['jumlah_transaksi'] += 1
+                        else:
+                            transaksi_per_jenis[jenis_pembelian] = {
+                                'jumlah_tabung': current_transaksi.get('jumlah_tabung', 1),
+                                'jumlah_transaksi': 1
+                            }
+                        
+                        # Update counter untuk summary
+                        jenis_pembelian_count[jenis_pembelian] += 1
+                        print(f"🔍 Debug: +1 {jenis_pembelian} ({current_transaksi.get('jumlah_tabung', 1)} tabung)")
+                        
+                        # Reset untuk transaksi berikutnya
+                        current_transaksi = {}
                 
                 # Batasi untuk menghindari mengambil terlalu banyak data
                 if len(riwayat_transaksi) > 50:
                     break
         
+        print(f"🔍 Debug: Hasil analisis jenis pembelian (digabung):")
+        for jenis, data in transaksi_per_jenis.items():
+            print(f"   - {jenis}: {data['jumlah_transaksi']} transaksi, {data['jumlah_tabung']} tabung total")
+        
         detail_info['riwayat'] = riwayat_transaksi
         detail_info['jenis_pembelian'] = jenis_pembelian_count
+        detail_info['transaksi_per_jenis'] = transaksi_per_jenis
         
-        # Buat summary analisis
+        # Buat summary analisis dengan data yang sudah digabung
         total_transaksi = sum(jenis_pembelian_count.values())
+        total_tabung = sum(data['jumlah_tabung'] for data in transaksi_per_jenis.values())
+        
         detail_info['summary'] = {
             'total_transaksi': total_transaksi,
+            'total_tabung': total_tabung,
             'rumah_tangga': jenis_pembelian_count['Rumah Tangga'],
             'usaha_mikro': jenis_pembelian_count['Usaha Mikro'],
             'usaha_kecil': jenis_pembelian_count['Usaha Kecil'],
