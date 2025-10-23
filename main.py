@@ -37,6 +37,211 @@ from src.navigation_handler import (
 )
 from src.excel_handler import save_to_excel_pivot_format
 
+def run_batalkan_inputan(accounts, selected_date):
+    """
+    Fungsi untuk menjalankan fitur Batalkan Inputan
+    Melakukan login, navigasi ke Laporan Penjualan, lalu ke Rekap Penjualan,
+    dan menampilkan list pembeli di terminal
+    """
+    print(f"\n🚀 Memulai proses Batalkan Inputan...")
+    
+    # Tampilkan informasi mode operasi
+    if selected_date:
+        print(f"📅 Mode: Dengan filter tanggal {selected_date.strftime('%d %B %Y')}")
+    else:
+        print(f"📅 Mode: TANPA filter tanggal spesifik")
+    
+    # Check headless mode configuration
+    if USE_ENHANCED_CONFIG:
+        headless_mode = config_manager.get('headless_mode', True)
+    else:
+        headless_mode = True  # Default fallback
+    
+    if headless_mode:
+        print("🌐 Browser akan berjalan dalam mode headless")
+    else:
+        print("🖥️ Browser akan berjalan dengan GUI visible")
+    
+    # Inisialisasi tracking
+    total_start = time.time()
+    rekap = {
+        'sukses': [],
+        'gagal_login': [],
+        'gagal_navigasi': [],
+        'gagal_waktu': [],
+        'gagal_masuk_akun': [],
+        'gagal_masuk_akun_count': 0
+    }
+    
+    # Loop pemrosesan setiap akun
+    for account_index, (nama, username, pin) in enumerate(accounts):
+        print(f"\n{'='*60}")
+        print(f"🔄 Memproses akun: {username} ({nama})")
+        print(f"{'='*60}")
+        
+        akun_start = time.time()
+        driver = None
+        
+        try:
+            # === TAHAP 1: LOGIN ===
+            print(f"🔐 Login untuk akun {username}...")
+            login_result = login_direct(username, pin)
+            driver = login_result[0]
+            login_info = login_result[1]
+            
+            # Track gagal masuk akun
+            if login_info['gagal_masuk_akun']:
+                rekap['gagal_masuk_akun'].append((username, f"Gagal Masuk Akun (retry berhasil)"))
+                rekap['gagal_masuk_akun_count'] += login_info['count']
+                print(f"📊 Gagal Masuk Akun terdeteksi untuk {username}")
+            
+            if not driver:
+                print(f"❌ Login gagal untuk akun {username}")
+                rekap['gagal_login'].append((username, "Login gagal"))
+                continue
+            
+            print(f"✅ Login berhasil untuk {username}")
+            time.sleep(2.0)  # Delay untuk stabilitas
+            
+            # === TAHAP 2: NAVIGASI KE LAPORAN PENJUALAN ===
+            print(f"📊 Navigasi ke Laporan Penjualan untuk {username}...")
+            
+            # Coba metode langsung terlebih dahulu
+            laporan_success = click_laporan_penjualan_direct(driver)
+            
+            # Jika gagal, coba metode fallback
+            if not laporan_success:
+                print("🔄 Mencoba metode fallback navigasi ke Laporan Penjualan...")
+                laporan_success = find_and_click_laporan_penjualan(driver)
+            
+            if not laporan_success:
+                print(f"❌ Gagal navigasi ke Laporan Penjualan untuk {username}")
+                rekap['gagal_navigasi'].append((username, "Gagal navigasi ke Laporan Penjualan"))
+                continue
+            
+            print("✅ Berhasil navigasi ke Laporan Penjualan!")
+            
+            # === TAHAP 3: KLIK ELEMEN TANGGAL (Jika User Input Tanggal) ===
+            if selected_date:
+                print(f"📅 Mengklik elemen tanggal: {selected_date.strftime('%d %B %Y')}")
+                date_elements_success = click_date_elements_direct(driver, selected_date)
+                
+                if date_elements_success:
+                    print("✅ Berhasil mengklik elemen tanggal!")
+                else:
+                    print("⚠️ Gagal mengklik elemen tanggal, lanjut ke tahap berikutnya...")
+            
+            # === TAHAP 4: NAVIGASI KE REKAP PENJUALAN ===
+            print(f"📈 Navigasi ke Rekap Penjualan untuk {username}...")
+            
+            # Import fungsi yang diperlukan untuk rekap penjualan
+            from src.login_handler import click_rekap_penjualan_direct
+            rekap_success = click_rekap_penjualan_direct(driver)
+            
+            if not rekap_success:
+                print(f"❌ Gagal navigasi ke Rekap Penjualan untuk {username}")
+                rekap['gagal_navigasi'].append((username, "Gagal navigasi ke Rekap Penjualan"))
+                continue
+            
+            print("✅ Berhasil navigasi ke Rekap Penjualan!")
+            
+            # === TAHAP 5: AMBIL DATA LIST PEMBELI ===
+            print(f"👥 Mengambil data list pembeli dari Rekap Penjualan untuk {username}...")
+            
+            from src.login_handler import get_customer_list_direct
+            customer_list = get_customer_list_direct(driver)
+            
+            if customer_list:
+                print(f"\n📋 === LIST PEMBELI UNTUK {username} ({nama}) ===")
+                print(f"📊 Total pembeli: {len(customer_list)}")
+                print("-" * 50)
+                
+                for i, customer in enumerate(customer_list, 1):
+                    print(f"{i:2d}. {customer}")
+                
+                print("-" * 50)
+                print(f"✅ Data list pembeli berhasil diambil: {len(customer_list)} pembeli")
+                rekap['sukses'].append(username)
+            else:
+                print("⚠️ Data list pembeli tidak ditemukan atau gagal diambil")
+                rekap['gagal_navigasi'].append((username, "Gagal ambil data list pembeli"))
+            
+            time.sleep(1.5)  # Delay untuk stabilitas
+            
+        except Exception as e:
+            print(f"❌ Error dalam proses untuk akun {username}: {str(e)}")
+            logger.error(f"Error untuk akun {username}: {str(e)}", exc_info=True)
+            rekap['gagal_navigasi'].append((username, f"Error: {str(e)}"))
+        
+        finally:
+            # Cleanup driver
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+        
+        akun_end = time.time()
+        akun_duration = akun_end - akun_start
+        print(f"⏱️ Waktu proses akun {username}: {akun_duration:.2f} detik")
+        
+        # Track timeout jika proses terlalu lama (>60 detik)
+        if akun_duration > 60:
+            rekap['gagal_waktu'].append((username, f"Timeout - proses terlalu lama ({akun_duration:.1f} detik)"))
+            print(f"⚠️ Timeout terdeteksi untuk {username}: {akun_duration:.1f} detik")
+        
+        # Delay antar akun untuk menghindari rate limiting
+        if account_index < len(accounts) - 1:
+            print("⏳ Menunggu sebentar untuk menghindari rate limiting...")
+            if (account_index + 1) % 5 == 0:
+                print("🚨 Delay ekstra setiap 5 akun...")
+                time.sleep(8.0)
+            else:
+                time.sleep(4.0)
+    
+    # === REKAP AKHIR BATALKAN INPUTAN ===
+    total_end = time.time()
+    total_duration = total_end - total_start
+    
+    print(f"\n{'='*60}")
+    print(f"📊 === REKAP AKHIR BATALKAN INPUTAN ===")
+    print(f"{'='*60}")
+    print(f"⏱️ Total waktu proses: {total_duration:.2f} detik")
+    print(f"📈 Total akun diproses: {len(accounts)}")
+    print(f"✅ Berhasil: {len(rekap['sukses'])} akun")
+    print(f"❌ Gagal Login: {len(rekap['gagal_login'])} akun")
+    print(f"❌ Gagal Navigasi: {len(rekap['gagal_navigasi'])} akun")
+    print(f"❌ Timeout: {len(rekap['gagal_waktu'])} akun")
+    print(f"🔄 Gagal Masuk Akun (retry): {len(rekap['gagal_masuk_akun'])} akun")
+    
+    if rekap['sukses']:
+        print(f"\n✅ Akun yang berhasil:")
+        for username in rekap['sukses']:
+            print(f"   - {username}")
+    
+    if rekap['gagal_login']:
+        print(f"\n❌ Akun yang gagal login:")
+        for username, reason in rekap['gagal_login']:
+            print(f"   - {username}: {reason}")
+    
+    if rekap['gagal_navigasi']:
+        print(f"\n❌ Akun yang gagal navigasi:")
+        for username, reason in rekap['gagal_navigasi']:
+            print(f"   - {username}: {reason}")
+    
+    if rekap['gagal_waktu']:
+        print(f"\n⚠️ Akun yang timeout:")
+        for username, reason in rekap['gagal_waktu']:
+            print(f"   - {username}: {reason}")
+    
+    if rekap['gagal_masuk_akun']:
+        print(f"\n🔄 Akun dengan retry berhasil:")
+        for username, reason in rekap['gagal_masuk_akun']:
+            print(f"   - {username}: {reason}")
+    
+    print(f"\n🎉 Proses Batalkan Inputan selesai!")
+    print(f"👋 Terima kasih!")
+
 def main():
     """
     Fungsi utama untuk menjalankan automation batch processing
@@ -69,13 +274,14 @@ def main():
     
     # Handle menu choice
     if menu_choice == 2:
-        print("\n🚧 === FITUR BATALKAN INPUTAN ===")
-        print("Program untuk fitur 'Batalkan Inputan' akan segera tersedia!")
-        print("Fitur ini akan memungkinkan untuk:")
-        print("- Membatalkan inputan yang sudah dilakukan")
-        print("- Reset data tertentu") 
-        print("- Dan fitur lainnya yang akan ditambahkan")
-        print("\n👋 Program selesai. Terima kasih!")
+        print("\n📋 === FITUR BATALKAN INPUTAN ===")
+        print("Memulai proses Batalkan Inputan...")
+        
+        # Minta input filter tanggal dari user (opsional)
+        selected_date = get_date_input()
+        
+        # Jalankan fitur batalkan inputan
+        run_batalkan_inputan(accounts, selected_date)
         return
     
     # Jika menu_choice == 1 (Check Stok), lanjutkan ke proses normal
@@ -244,38 +450,7 @@ def main():
                 print("⏳ Menunggu stabilitas setelah pengambilan data...")
                 time.sleep(1.5)  # Delay 1.5 detik untuk stabilitas
                 
-                # === TAHAP 4.5: DECISION REKAP PENJUALAN (DISABLED UNTUK SAAT INI) ===
-                # print(f"🤔 Decision: Apakah perlu klik Rekap Penjualan untuk {username}?")
-                # from src.login_handler import should_click_rekap_penjualan
-                # need_rekap = should_click_rekap_penjualan(tabung_terjual)
-                # 
-                # if need_rekap:
-                #     # === TAHAP 4.6: NAVIGASI KE REKAP PENJUALAN ===
-                #     print(f"📈 Navigasi ke Rekap Penjualan untuk {username}...")
-                #     from src.login_handler import click_rekap_penjualan_direct
-                #     rekap_success = click_rekap_penjualan_direct(driver)
-                #     
-                #     if rekap_success:
-                #         print("✅ Berhasil navigasi ke Rekap Penjualan!")
-                #         
-                #         # === TAHAP 4.7: AMBIL DATA LIST PEMBELI ===
-                #         print(f"👥 Mengambil data list pembeli dari Rekap Penjualan untuk {username}...")
-                #         from src.login_handler import get_customer_list_direct
-                #         customer_list = get_customer_list_direct(driver)
-                #         
-                #         if customer_list:
-                #             print(f"✅ Data list pembeli berhasil diambil: {len(customer_list)} pembeli")
-                #         else:
-                #             print("⚠️ Data list pembeli tidak ditemukan atau gagal diambil")
-                #     else:
-                #         print("⚠️ Gagal navigasi ke Rekap Penjualan, akan lanjut ke tahap berikutnya...")
-                # else:
-                #     print("⏭️ Skip Rekap Penjualan - tidak ada penjualan atau data tidak valid")
-                
-                print("⏭️ Fungsi Decision Rekap Penjualan dinonaktifkan untuk sementara")
-                print("📊 Program berhenti di pengambilan data tabung terjual")
-                
-                # === TAHAP 7: SIMPAN DATA KE EXCEL ===
+                # === TAHAP 5: SIMPAN DATA KE EXCEL ===
                 print(f"💾 Menyimpan data ke Excel untuk {username}...")
                 try:
                     # Siapkan data untuk Excel
