@@ -49,7 +49,9 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.pytestcache/
 cover/
+.coverage_html/
 
 # Translations
 *.mo
@@ -181,12 +183,13 @@ akun/
 
 # Browser profiles and cache
 chrome_profile/
-chrome/Cache/
-chrome/Default/
-chrome/Session Storage/
-chrome/Local Storage/
-chrome/IndexedDB/
-chrome/Service Worker/
+chrome/Chromium/profile/
+chrome/Chromium/*/Cache/
+chrome/Chromium/*/Default/
+chrome/Chromium/*/Session Storage/
+chrome/Chromium/*/Local Storage/
+chrome/Chromium/*/IndexedDB/
+chrome/Chromium/*/Service Worker/
 
 # ChromeDriver executable (platform specific)
 chromedriver.exe
@@ -201,6 +204,10 @@ drivers/
 debug_calendar_selectors.txt
 *.tmp
 *.temp
+
+# Chrome/Chromium debug logs and cache
+chrome/Chromium/*/bin/debug.log
+chrome/Chromium/profile/chrome_debug.log
 
 # Configuration with sensitive data
 config.yaml
