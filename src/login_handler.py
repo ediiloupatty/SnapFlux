@@ -507,116 +507,230 @@ def get_customer_list_direct(driver, pin):
             
             print(f"\n🖱️ Mengklik pembeli dengan >1 tabung untuk melihat detail...")
             
-            # Cari elemen yang bisa diklik untuk setiap pembeli dengan >1 tabung
-            for customer in customer_elements:
-                try:
-                    # Cari elemen yang mengandung nama pembeli dan bisa diklik
-                    clickable_elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{customer['name']}')]")
+            # Process customers in a loop, rechecking after each cancellation
+            processed_customers = []
+            max_iterations = 10  # Prevent infinite loop
+            iteration = 0
+            
+            while iteration < max_iterations:
+                iteration += 1
+                print(f"\n{'='*60}")
+                print(f"🔄 Iterasi {iteration}: Mencari ulang pembeli dengan >1 tabung...")
+                print(f"{'='*60}")
+                
+                # Refresh halaman untuk mendapatkan data terbaru
+                if iteration > 1:
+                    print("🔄 Refresh halaman untuk mendapatkan data terbaru...")
+                    driver.refresh()
+                    time.sleep(3.0)
+                
+                # Cari ulang pembeli dengan >1 tabung
+                time.sleep(2.0)
+                all_elements = driver.find_elements(By.XPATH, "//*[text()]")
+                all_texts = []
+                
+                for element in all_elements:
+                    text = element.text.strip()
+                    if text and len(text) > 2:
+                        all_texts.append(text)
+                
+                # Re-analyze customer data
+                customer_elements_current = []
+                i = 0
+                
+                while i < len(all_texts) - 3:
+                    current_text = all_texts[i]
                     
-                    for element in clickable_elements:
-                        try:
-                            # Cek apakah elemen bisa diklik dan terlihat
-                            if element.is_displayed() and element.is_enabled():
-                                # Cek apakah ini bukan elemen yang sudah kita proses sebelumnya
-                                element_text = element.text.strip()
-                                if customer['name'] in element_text and len(element_text) < 100:  # Pastikan ini nama, bukan teks panjang
-                                    print(f"🖱️ Mengklik: {customer['name']} ({customer['tabung']} Tabung)")
-                                    element.click()
-                                    
-                                    # Tunggu halaman detail load
-                                    time.sleep(3.0)
-                                    
-                                    # Ambil detail informasi dari halaman "Identitas Pelanggan"
-                                    detail_info = get_customer_detail_info(driver)
-                                    
-                                    if detail_info:
-                                        print(f"📋 Detail untuk {customer['name']}:")
-                                        print(f"   - Nama: {detail_info.get('nama', 'N/A')}")
-                                        print(f"   - NIK: {detail_info.get('nik', 'N/A')}")
-                                        print(f"   - Status: {detail_info.get('status', 'N/A')}")
-                                        print(f"   - Total Pembelian: {detail_info.get('total_pembelian', 'N/A')}")
-                                        print(f"   - Riwayat Transaksi: {len(detail_info.get('riwayat', []))} transaksi")
+                    if (len(current_text) > 5 and 
+                        current_text[0].isupper() and 
+                        not current_text.startswith(('710', '717', '917', '920')) and
+                        'Jenis Pelanggan' not in current_text and
+                        'Tabung LPG' not in current_text and
+                        'Penjualan' not in current_text and
+                        'Total' not in current_text and
+                        'Jumlah' not in current_text and
+                        'Atur Rentang Waktu' not in current_text):
+                        
+                        if i + 3 < len(all_texts):
+                            next_text1 = all_texts[i + 1]
+                            next_text2 = all_texts[i + 2]
+                            next_text3 = all_texts[i + 3]
+                            
+                            if (next_text1.startswith(('710', '717', '917', '920')) and
+                                'Jenis Pelanggan' in next_text2 and
+                                'Tabung LPG' in next_text3):
+                                
+                                import re
+                                tabung_match = re.search(r'(\d+)\s+Tabung LPG', next_text3)
+                                jumlah_tabung = tabung_match.group(1) if tabung_match else "?"
+                                
+                                # Check if this customer was already processed
+                                customer_key = f"{current_text}_{next_text1}"
+                                if customer_key not in processed_customers and jumlah_tabung != "?" and int(jumlah_tabung) > 1:
+                                    customer_elements_current.append({
+                                        'name': current_text,
+                                        'nik': next_text1,
+                                        'tabung': jumlah_tabung,
+                                        'key': customer_key
+                                    })
+                                
+                                i += 4
+                                continue
+                    
+                    i += 1
+                
+                print(f"📊 Found {len(customer_elements_current)} pembeli dengan >1 tabung yang belum diproses")
+                
+                if not customer_elements_current:
+                    print("✅ Tidak ada lagi pembeli dengan >1 tabung yang perlu diproses")
+                    break
+                
+                # Process each customer
+                for customer in customer_elements_current:
+                    try:
+                        # Cari elemen yang mengandung nama pembeli dan bisa diklik
+                        clickable_elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{customer['name']}')]")
+                        
+                        for element in clickable_elements:
+                            try:
+                                # Cek apakah elemen bisa diklik dan terlihat
+                                if element.is_displayed() and element.is_enabled():
+                                    # Cek apakah ini bukan elemen yang sudah kita proses sebelumnya
+                                    element_text = element.text.strip()
+                                    if customer['name'] in element_text and len(element_text) < 100:  # Pastikan ini nama, bukan teks panjang
+                                        print(f"🖱️ Mengklik: {customer['name']} ({customer['tabung']} Tabung)")
+                                        element.click()
                                         
-                                        # Tampilkan summary sederhana jenis pembelian
-                                        transaksi_per_jenis = detail_info.get('transaksi_per_jenis', {})
+                                        # Tunggu halaman detail load
+                                        time.sleep(3.0)
                                         
-                                        if transaksi_per_jenis:
-                                            print(f"   📊 Summary Pembelian:")
+                                        # Ambil detail informasi dari halaman "Identitas Pelanggan"
+                                        detail_info = get_customer_detail_info(driver)
+                                        
+                                        if detail_info:
+                                            print(f"📋 Detail untuk {customer['name']}:")
+                                            print(f"   - Nama: {detail_info.get('nama', 'N/A')}")
+                                            print(f"   - NIK: {detail_info.get('nik', 'N/A')}")
+                                            print(f"   - Status: {detail_info.get('status', 'N/A')}")
+                                            print(f"   - Total Pembelian: {detail_info.get('total_pembelian', 'N/A')}")
+                                            print(f"   - Riwayat Transaksi: {len(detail_info.get('riwayat', []))} transaksi")
                                             
-                                            # Tampilkan detail transaksi untuk analisis
-                                            if detail_info.get('riwayat'):
-                                                print(f"   📋 Detail Riwayat Transaksi:")
-                                                riwayat_count = 0
-                                                for text in detail_info['riwayat'][:10]:  # Batasi untuk readability
-                                                    if 'Tabung LPG' in text or 'Rumah Tangga' in text or 'Rp' in text:
-                                                        riwayat_count += 1
-                                                        print(f"      {riwayat_count}. {text}")
+                                            # Tampilkan summary sederhana jenis pembelian
+                                            transaksi_per_jenis = detail_info.get('transaksi_per_jenis', {})
                                             
-                                            # Cek apakah ada "Usaha Mikro" - jika ya, skip
-                                            if 'Usaha Mikro' in transaksi_per_jenis:
-                                                print(f"   ⏭️ Skip {customer['name']} - Jenis Usaha Mikro")
-                                                # Kembali ke halaman sebelumnya tanpa klik transaksi
-                                                driver.back()
-                                                time.sleep(2.0)
-                                                continue  # Lanjut ke customer berikutnya
-                                            
-                                            # Focus hanya pada "Rumah Tangga"
-                                            rumah_tangga_data = transaksi_per_jenis.get('Rumah Tangga')
-                                            if rumah_tangga_data and rumah_tangga_data['jumlah_tabung'] > 1:
-                                                print(f"   🎯 Focus pada Rumah Tangga: {rumah_tangga_data['jumlah_tabung']} tabung")
+                                            if transaksi_per_jenis:
+                                                print(f"   📊 Summary Pembelian:")
                                                 
-                                                # ANALISIS SKENARIO PEMBATALAN BERDASARKAN JUMLAH INPUTAN
-                                                jumlah_transaksi = rumah_tangga_data['jumlah_transaksi']
-                                                jumlah_tabung = rumah_tangga_data['jumlah_tabung']
+                                                # Tampilkan detail transaksi untuk analisis
+                                                if detail_info.get('riwayat'):
+                                                    print(f"   📋 Detail Riwayat Transaksi:")
+                                                    riwayat_count = 0
+                                                    for text in detail_info['riwayat'][:10]:  # Batasi untuk readability
+                                                        if 'Tabung LPG' in text or 'Rumah Tangga' in text or 'Rp' in text:
+                                                            riwayat_count += 1
+                                                            print(f"      {riwayat_count}. {text}")
                                                 
-                                                if jumlah_transaksi == 1 and jumlah_tabung > 1:
-                                                    # SKENARIO 1: 2 TABUNG - 1 INPUTAN (SALAH INPUTAN)
-                                                    print(f"   🔍 SKENARIO 1: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
-                                                    print(f"   📋 AKSI: BATALKAN SEMUA (Salah Inputan - seharusnya 1 tabung)")
-                                                    
-                                                    # Batalkan transaksi tunggal yang salah inputan
-                                                    cancel_result = click_rumah_tangga_transaction(driver, pin)
-                                                    if cancel_result:
-                                                        print(f"   ✅ Berhasil membatalkan transaksi salah inputan untuk {customer['name']}")
-                                                    else:
-                                                        print(f"   ❌ Gagal membatalkan transaksi salah inputan untuk {customer['name']}")
-                                                
-                                                elif jumlah_transaksi > 1 and jumlah_tabung > 1:
-                                                    # SKENARIO 2: 2 TABUNG - 2 INPUTAN (DUPLIKASI INPUTAN)
-                                                    print(f"   🔍 SKENARIO 2: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
-                                                    print(f"   📋 AKSI: BATALKAN SALAH SATU (Duplikasi Inputan)")
-                                                    
-                                                    # Batalkan salah satu transaksi (yang pertama)
-                                                    cancel_result = click_rumah_tangga_transaction(driver, pin)
-                                                    if cancel_result:
-                                                        print(f"   ✅ Berhasil membatalkan salah satu transaksi duplikasi untuk {customer['name']}")
-                                                    else:
-                                                        print(f"   ❌ Gagal membatalkan transaksi duplikasi untuk {customer['name']}")
-                                                
-                                                else:
-                                                    # SKENARIO LAIN: Tidak perlu dibatalkan
-                                                    print(f"   ⏭️ SKENARIO LAIN: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
-                                                    print(f"   📋 AKSI: SKIP (Tidak perlu dibatalkan)")
+                                                # Cek apakah ada "Usaha Mikro" - jika ya, skip
+                                                if 'Usaha Mikro' in transaksi_per_jenis:
+                                                    print(f"   ⏭️ Skip {customer['name']} - Jenis Usaha Mikro")
+                                                    # Kembali ke halaman sebelumnya tanpa klik transaksi
                                                     driver.back()
                                                     time.sleep(2.0)
-                                                    continue
+                                                    continue  # Lanjut ke customer berikutnya
                                                 
-                                            # Tampilkan summary untuk jenis lain
-                                            for jenis, data in transaksi_per_jenis.items():
-                                                if jenis != 'Rumah Tangga':
-                                                    print(f"      {customer['name']}: {data['jumlah_tabung']} tabung - {jenis}")
-                                    
-                                    # Kembali ke halaman sebelumnya
-                                    driver.back()
-                                    time.sleep(2.0)
-                                    continue  # Lanjut ke customer berikutnya
-                        except Exception as e:
-                            print(f"❌ Error mengklik {customer['name']}: {str(e)}")
-                            continue
-                            
-                except Exception as e:
-                    print(f"❌ Error mencari elemen untuk {customer['name']}: {str(e)}")
-                    continue
+                                                # Focus hanya pada "Rumah Tangga"
+                                                rumah_tangga_data = transaksi_per_jenis.get('Rumah Tangga')
+                                                if rumah_tangga_data and rumah_tangga_data['jumlah_tabung'] > 1:
+                                                    print(f"   🎯 Focus pada Rumah Tangga: {rumah_tangga_data['jumlah_tabung']} tabung")
+                                                    
+                                                    # ANALISIS SKENARIO PEMBATALAN BERDASARKAN JUMLAH INPUTAN
+                                                    jumlah_transaksi = rumah_tangga_data['jumlah_transaksi']
+                                                    jumlah_tabung = rumah_tangga_data['jumlah_tabung']
+                                                    
+                                                    if jumlah_transaksi == 1 and jumlah_tabung > 1:
+                                                        # SKENARIO 1: 2 TABUNG - 1 INPUTAN (SALAH INPUTAN)
+                                                        print(f"   🔍 SKENARIO 1: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
+                                                        print(f"   📋 AKSI: BATALKAN SEMUA (Salah Inputan - seharusnya 1 tabung)")
+                                                        
+                                                        # Batalkan transaksi tunggal yang salah inputan
+                                                        cancel_result = click_rumah_tangga_transaction(driver, pin)
+                                                        if cancel_result:
+                                                            print(f"   ✅ Berhasil membatalkan transaksi salah inputan untuk {customer['name']}")
+                                                            # Kembali ke halaman Rekap Penjualan
+                                                            driver.back()
+                                                            time.sleep(2.0)
+                                                            # Kembali sekali lagi ke halaman Rekap Penjualan
+                                                            driver.back()
+                                                            time.sleep(2.0)
+                                                            # Mark as processed
+                                                            processed_customers.append(customer['key'])
+                                                            # Break inner loop to recheck page
+                                                            break
+                                                        else:
+                                                            print(f"   ❌ Gagal membatalkan transaksi salah inputan untuk {customer['name']}")
+                                                        
+                                                        # Kembali ke halaman Rekap Penjualan
+                                                        driver.back()
+                                                        time.sleep(2.0)
+                                                        driver.back()
+                                                        time.sleep(2.0)
+                                                        # Break inner loop to recheck page
+                                                        break
+                                                    
+                                                    elif jumlah_transaksi > 1 and jumlah_tabung > 1:
+                                                        # SKENARIO 2: 2 TABUNG - 2 INPUTAN (DUPLIKASI INPUTAN)
+                                                        print(f"   🔍 SKENARIO 2: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
+                                                        print(f"   📋 AKSI: BATALKAN SALAH SATU (Duplikasi Inputan)")
+                                                        
+                                                        # Batalkan salah satu transaksi (yang pertama)
+                                                        cancel_result = click_rumah_tangga_transaction(driver, pin)
+                                                        if cancel_result:
+                                                            print(f"   ✅ Berhasil membatalkan salah satu transaksi duplikasi untuk {customer['name']}")
+                                                            # Kembali ke halaman Rekap Penjualan
+                                                            driver.back()
+                                                            time.sleep(2.0)
+                                                            # Kembali sekali lagi ke halaman Rekap Penjualan
+                                                            driver.back()
+                                                            time.sleep(2.0)
+                                                            # Mark as processed
+                                                            processed_customers.append(customer['key'])
+                                                            # Break inner loop to recheck page
+                                                            break
+                                                        else:
+                                                            print(f"   ❌ Gagal membatalkan transaksi duplikasi untuk {customer['name']}")
+                                                        
+                                                        # Kembali ke halaman Rekap Penjualan
+                                                        driver.back()
+                                                        time.sleep(2.0)
+                                                        driver.back()
+                                                        time.sleep(2.0)
+                                                        # Break inner loop to recheck page
+                                                        break
+                                                    
+                                                    else:
+                                                        # SKENARIO LAIN: Tidak perlu dibatalkan
+                                                        print(f"   ⏭️ SKENARIO LAIN: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
+                                                        print(f"   📋 AKSI: SKIP (Tidak perlu dibatalkan)")
+                                                        driver.back()
+                                                        time.sleep(2.0)
+                                                        continue
+                                                    
+                                                    # Tampilkan summary untuk jenis lain
+                                                    for jenis, data in transaksi_per_jenis.items():
+                                                        if jenis != 'Rumah Tangga':
+                                                            print(f"      {customer['name']}: {data['jumlah_tabung']} tabung - {jenis}")
+                                        
+                                        # Kembali ke halaman sebelumnya
+                                        driver.back()
+                                        time.sleep(2.0)
+                                        continue  # Lanjut ke customer berikutnya
+                            except Exception as e:
+                                print(f"❌ Error mengklik {customer['name']}: {str(e)}")
+                                continue
+                                
+                    except Exception as e:
+                        print(f"❌ Error mencari elemen untuk {customer['name']}: {str(e)}")
+                        continue
         
         # Tidak ada batasan - ambil semua data pembeli yang ada
         
