@@ -633,6 +633,8 @@ def get_customer_list_direct(driver, pin):
                                                 # Cek apakah ada "Usaha Mikro" - jika ya, skip
                                                 if 'Usaha Mikro' in transaksi_per_jenis:
                                                     print(f"   ⏭️ Skip {customer['name']} - Jenis Usaha Mikro")
+                                                    # Tambahkan customer ke processed_customers untuk menghindari loop
+                                                    processed_customers.append(customer['key'])
                                                     # Kembali ke halaman sebelumnya tanpa klik transaksi
                                                     driver.back()
                                                     time.sleep(2.0)
@@ -711,6 +713,8 @@ def get_customer_list_direct(driver, pin):
                                                         # SKENARIO LAIN: Tidak perlu dibatalkan
                                                         print(f"   ⏭️ SKENARIO LAIN: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
                                                         print(f"   📋 AKSI: SKIP (Tidak perlu dibatalkan)")
+                                                        # Tambahkan customer ke processed_customers untuk menghindari loop
+                                                        processed_customers.append(customer['key'])
                                                         driver.back()
                                                         time.sleep(2.0)
                                                         continue

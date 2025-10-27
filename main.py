@@ -33,7 +33,8 @@ from src.login_handler import login_direct
 from src.data_extractor import get_stock_value_direct, get_tabung_terjual_direct
 from src.navigation_handler import (
     click_laporan_penjualan_direct, find_and_click_laporan_penjualan,
-    navigate_to_atur_produk, click_date_elements_direct
+    navigate_to_atur_produk, click_date_elements_direct,
+    click_date_elements_rekap_penjualan
 )
 from src.excel_handler import save_to_excel_pivot_format
 
@@ -41,6 +42,7 @@ def run_batalkan_inputan(accounts, selected_date):
     """
     Fungsi untuk menjalankan fitur Batalkan Inputan
     Melakukan login, navigasi ke Laporan Penjualan, lalu ke Rekap Penjualan,
+    menerapkan filter tanggal di Rekap Penjualan (jika ada input tanggal),
     dan menampilkan list pembeli di terminal
     """
     print(f"\n🚀 Memulai proses Batalkan Inputan...")
@@ -121,17 +123,7 @@ def run_batalkan_inputan(accounts, selected_date):
             
             print("✅ Berhasil navigasi ke Laporan Penjualan!")
             
-            # === TAHAP 3: KLIK ELEMEN TANGGAL (Jika User Input Tanggal) ===
-            if selected_date:
-                print(f"📅 Mengklik elemen tanggal: {selected_date.strftime('%d %B %Y')}")
-                date_elements_success = click_date_elements_direct(driver, selected_date)
-                
-                if date_elements_success:
-                    print("✅ Berhasil mengklik elemen tanggal!")
-                else:
-                    print("⚠️ Gagal mengklik elemen tanggal, lanjut ke tahap berikutnya...")
-            
-            # === TAHAP 4: NAVIGASI KE REKAP PENJUALAN ===
+            # === TAHAP 3: NAVIGASI KE REKAP PENJUALAN ===
             print(f"📈 Navigasi ke Rekap Penjualan untuk {username}...")
             
             # Import fungsi yang diperlukan untuk rekap penjualan
@@ -144,6 +136,16 @@ def run_batalkan_inputan(accounts, selected_date):
                 continue
             
             print("✅ Berhasil navigasi ke Rekap Penjualan!")
+            
+            # === TAHAP 4: KLIK ELEMEN TANGGAL DI REKAP PENJUALAN (Jika User Input Tanggal) ===
+            if selected_date:
+                print(f"📅 Mengklik elemen tanggal di Rekap Penjualan: {selected_date.strftime('%d %B %Y')}")
+                date_elements_success = click_date_elements_rekap_penjualan(driver, selected_date)
+                
+                if date_elements_success:
+                    print("✅ Berhasil mengklik elemen tanggal di Rekap Penjualan!")
+                else:
+                    print("⚠️ Gagal mengklik elemen tanggal di Rekap Penjualan, lanjut ke tahap berikutnya...")
             
             # === TAHAP 5: AMBIL DATA LIST PEMBELI ===
             print(f"👥 Mengambil data list pembeli dari Rekap Penjualan untuk {username}...")

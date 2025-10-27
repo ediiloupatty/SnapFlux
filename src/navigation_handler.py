@@ -438,6 +438,131 @@ def click_date_elements_direct(driver, selected_date=None):
         print(f"❌ Error mengklik elemen tanggal: {str(e)}")
         return False
 
+def click_date_elements_rekap_penjualan(driver, selected_date=None):
+    """Klik elemen tanggal di halaman Rekap Penjualan"""
+    print("\n📅 === KLIK ELEMEN TANGGAL DI REKAP PENJUALAN ===")
+    
+    try:
+        time.sleep(1.5)
+        print("🚀 Mencari elemen filter tanggal di Rekap Penjualan...")
+        
+        # Cari elemen "Atur Rentang Waktu" atau filter tanggal
+        date_filter_found = False
+        
+        # Coba berbagai teks yang mungkin muncul di Rekap Penjualan
+        filter_texts = ["Atur Rentang Waktu", "Pilih Tanggal", "Filter Tanggal", "Tanggal"]
+        
+        for filter_text in filter_texts:
+            try:
+                elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{filter_text}')]")
+                if elements:
+                    for element in elements:
+                        text = element.text.strip()
+                        if text and any(keyword in text.lower() for keyword in ['rentang', 'waktu', 'tanggal', 'pilih']):
+                            if element.is_displayed() and element.is_enabled():
+                                print(f"✅ Elemen filter tanggal ditemukan: '{text}'")
+                                element.click()
+                                date_filter_found = True
+                                break
+                    if date_filter_found:
+                        break
+            except Exception:
+                continue
+        
+        if not date_filter_found:
+            print("⚠️ Elemen filter tanggal tidak ditemukan di Rekap Penjualan")
+            print("ℹ️ Akan lanjut tanpa filter tanggal")
+            return False
+        
+        time.sleep(1)
+        
+        # Klik bulan tahun
+        if selected_date:
+            bulan_name = BULAN_ID[selected_date.month]
+            tahun = selected_date.year
+            bulan_tahun_text = f"{bulan_name.lower().capitalize()} {tahun}"
+        else:
+            today = datetime.now()
+            bulan_name = BULAN_ID[today.month]
+            tahun = today.year
+            bulan_tahun_text = f"{bulan_name.lower().capitalize()} {tahun}"
+        
+        print(f"🎯 Mencari elemen bulan tahun: '{bulan_tahun_text}'")
+        
+        # Klik bulan tahun
+        try:
+            elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{bulan_tahun_text}')]")
+            for element in elements:
+                text = element.text.strip()
+                if text and bulan_name.lower() in text.lower() and str(tahun) in text:
+                    if element.is_displayed() and element.is_enabled():
+                        element.click()
+                        print(f"✅ Berhasil mengklik bulan tahun: '{text}'")
+                        break
+        except Exception as e:
+            print(f"⚠️ Error mengklik bulan tahun: {str(e)}")
+            return False
+        
+        time.sleep(1)
+        
+        # Klik bulan singkat
+        if selected_date:
+            bulan_singkat = BULAN_SINGKAT[selected_date.month]
+        else:
+            today = datetime.now()
+            bulan_singkat = BULAN_SINGKAT[today.month]
+        
+        print(f"🎯 Mencari elemen bulan singkat: '{bulan_singkat}'")
+        
+        try:
+            elements = driver.find_elements(By.XPATH, f"//*[text()='{bulan_singkat}']")
+            for element in elements:
+                text = element.text.strip()
+                if text and text == bulan_singkat:
+                    if element.is_displayed() and element.is_enabled():
+                        element.click()
+                        print(f"✅ Berhasil mengklik bulan singkat: '{text}'")
+                        break
+        except Exception as e:
+            print(f"⚠️ Error mengklik bulan singkat: {str(e)}")
+            return False
+        
+        time.sleep(1)
+        
+        # Klik tanggal spesifik
+        if selected_date:
+            tanggal_hari = selected_date.day
+        else:
+            today = datetime.now()
+            tanggal_hari = today.day
+        
+        print(f"🎯 Mencari elemen tanggal: '{tanggal_hari}'")
+        
+        try:
+            elements = driver.find_elements(By.XPATH, f"//*[text()='{tanggal_hari}']")
+            for element in elements:
+                text = element.text.strip()
+                if text and text == str(tanggal_hari):
+                    if element.is_displayed() and element.is_enabled():
+                        element.click()
+                        print(f"✅ Berhasil mengklik tanggal: '{text}'")
+                        time.sleep(0.2)
+                        element.click()  # Klik 2x
+                        print(f"✅ Berhasil mengklik tanggal 2x: '{text}'")
+                        break
+        except Exception as e:
+            print(f"⚠️ Error mengklik tanggal: {str(e)}")
+            return False
+        
+        time.sleep(1)
+        
+        print("✅ Berhasil mengklik elemen tanggal di Rekap Penjualan!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error mengklik elemen tanggal di Rekap Penjualan: {str(e)}")
+        return False
+
 def click_rekap_penjualan_direct(driver):
     """Klik menu 'Rekap Penjualan' langsung menggunakan lokasi yang sudah diketahui - lebih cepat"""
     print("\n📈 === KLIK REKAP PENJUALAN LANGSUNG ===")
@@ -492,7 +617,7 @@ def click_rekap_penjualan_direct(driver):
                         else:
                             print("❌ Menu tidak dapat diklik")
                             return False
-            
+                
             except Exception as e2:
                 print(f"❌ Error dengan class fallback: {str(e2)}")
                 return False

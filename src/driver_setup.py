@@ -96,7 +96,7 @@ def setup_driver(headless=False):
         options.add_argument("--mute-audio")
         
         # === OPTIMASI JAVASCRIPT ===
-        options.add_argument("--disable-javascript")  # Block JavaScript untuk performa maksimal
+        #Block JavaScript untuk performa maksimal
         options.add_argument("--disable-java")
         options.add_argument("--disable-flash")
         
