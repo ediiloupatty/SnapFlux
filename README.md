@@ -12,9 +12,20 @@ SnapFlux adalah aplikasi untuk automated web scraping dan data extraction dari p
 
 - **Automated Login & Navigation** - Login otomatis ke portal merchant
 - **Data Extraction** - Ekstraksi data penjualan dengan status dan timestamp
-- **Stock Monitoring** - Automatic stock data retrieval jika data penjualan tidak ada
 - **Excel Export** - Export hasil ke format Excel dengan struktur yang rapi
 - **Headless Mode** - Mode tanpa GUI untuk performa optimal
+
+### 📋 Main Menu Options
+
+1. **Check Stok** - Automated stock monitoring dan penjualan tracking
+   - Automatic stock data retrieval dari dashboard
+   - Penjualan tracking dengan filter tanggal opsional
+   - Excel export dengan format pivot yang rapi
+2. **Batalkan Inputan** ⭐ NEW in v2
+   - Navigasi ke Rekap Penjualan
+   - Menampilkan list pembeli dari sistem
+   - Support filter tanggal untuk pencarian spesifik
+   - Fitur ini tidak tersedia di v1
 
 ### 🆕 Enhanced Enterprise Features (v2.0)
 
@@ -155,11 +166,25 @@ pip install -r requirements.txt
 
 ## 📊 Features in Detail
 
-### Core Automation Features
+### Feature 1: Check Stok
 
-- **Date Filtering**: Filter reports by specific date ranges
+- **Stock Monitoring**: Automatic stock data retrieval dari dashboard
+- **Sales Tracking**: Data tabung terjual dengan format "X Tabung"
+- **Date Filtering**: Filter reports by specific date ranges (opsional)
+- **Status Detection**: Auto-detect status (Ada Penjualan/Tidak Ada Penjualan)
+- **Excel Export**: Export hasil ke Excel dengan format pivot yang rapi
 - **Progress Tracking**: Real-time progress monitoring dengan detailed logging
-- **Export Options**: Excel export dengan conditional formatting
+
+### Feature 2: Batalkan Inputan (NEW in v2)
+
+- **Rekap Penjualan Navigation**: Otomatis navigasi ke halaman Rekap Penjualan
+- **Customer List Display**: Menampilkan list pembeli dari Rekap Penjualan
+- **Date Filtering**: Support filter tanggal untuk pencarian data spesifik
+- **Real-time Data**: Live data retrieval dari sistem merchant
+- **Terminal Display**: Menampilkan hasil langsung di terminal dengan format rapi
+- **Status Tracking**: Track sukses/gagal untuk setiap akun yang diproses
+
+> **Note**: Fitur Batalkan Inputan tidak tersedia di v1 dan merupakan fitur eksklusif v2.0
 
 ### Enhanced Enterprise Features (v2.0)
 
@@ -170,6 +195,10 @@ pip install -r requirements.txt
 - **Structured Logging**: Rotating log files dengan proper error tracking
 
 ## 🆕 What's New in v2.0
+
+### Major Features Added
+
+1. **🆕 Fitur Batalkan Inputan** - Fitur baru untuk navigasi ke Rekap Penjualan dan menampilkan list pembeli (tidak tersedia di v1)
 
 ### Enterprise-Grade Improvements
 
