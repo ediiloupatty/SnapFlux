@@ -15,7 +15,6 @@ SnapFlux adalah aplikasi untuk automated web scraping dan data extraction dari p
 - **Stock Monitoring** - Automatic stock data retrieval jika data penjualan tidak ada
 - **Excel Export** - Export hasil ke format Excel dengan struktur yang rapi
 - **Headless Mode** - Mode tanpa GUI untuk performa optimal
-- **Batch Processing** - Support multiple akun dalam satu run
 
 ### 🆕 Enhanced Enterprise Features (v2.0)
 
@@ -158,7 +157,6 @@ pip install -r requirements.txt
 
 ### Core Automation Features
 
-- **Multi-Account Support**: Process multiple merchant accounts secara batch
 - **Date Filtering**: Filter reports by specific date ranges
 - **Progress Tracking**: Real-time progress monitoring dengan detailed logging
 - **Export Options**: Excel export dengan conditional formatting
