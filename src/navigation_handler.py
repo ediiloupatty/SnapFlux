@@ -20,8 +20,10 @@ def click_laporan_penjualan_direct(driver):
             if text and 'laporan' in text.lower() and 'penjualan' in text.lower():
                 print(f"✅ Menu Laporan Penjualan ditemukan langsung!")
                 print(f"📝 Text: '{text}'")
+                print(f"🔍 Debug Laporan Penjualan 1: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
                 if element.is_displayed() and element.is_enabled():
                     element.click()
+                    print(f"🔍 Debug Laporan Penjualan Success: XPath='//*[contains(text(), 'Laporan Penjualan')]'")
                     print(f"✅ Berhasil mengklik menu: '{text}'")
                     time.sleep(2.0)
                     print("✅ Navigasi ke Laporan Penjualan berhasil!")

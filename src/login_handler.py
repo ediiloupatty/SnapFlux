@@ -383,9 +383,12 @@ def click_rekap_penjualan_direct(driver):
         # Langsung gunakan selector yang sudah diketahui dari debugging
         try:
             rekap_element = driver.find_element(By.XPATH, "//div[contains(text(), 'Rekap Penjualan')]")
+            text = rekap_element.text.strip()
+            print(f"🔍 Debug Rekap Penjualan 1: Text='{text}', Tag={rekap_element.tag_name}, Class={rekap_element.get_attribute('class')}, ID={rekap_element.get_attribute('id')}")
             
             if rekap_element.is_displayed() and rekap_element.is_enabled():
                 rekap_element.click()
+                print(f"🔍 Debug Rekap Penjualan Success: XPath='//div[contains(text(), 'Rekap Penjualan')]'")
                 print("✅ Berhasil mengklik Rekap Penjualan!")
                 
                 # Tunggu navigasi ke halaman Rekap Penjualan
@@ -599,7 +602,9 @@ def get_customer_list_direct(driver, pin):
                                     element_text = element.text.strip()
                                     if customer['name'] in element_text and len(element_text) < 100:  # Pastikan ini nama, bukan teks panjang
                                         print(f"🖱️ Mengklik: {customer['name']} ({customer['tabung']} Tabung)")
+                                        print(f"🔍 Debug Customer Click 1: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
                                         element.click()
+                                        print(f"🔍 Debug Customer Click Success: XPath='//*[contains(text(), '{customer['name']}')]'")
                                         
                                         # Tunggu halaman detail load
                                         time.sleep(3.0)
