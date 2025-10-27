@@ -4,8 +4,7 @@ Automation script untuk mengambil data transaksi dari platform Snapflux mengguna
 
 ## 📋 Description
 
-SnapFlux adalah aplikasi untuk automated web scraping dan data extraction dari portal [subsiditepatlpg.mypertamina.id](https://subsiditepatlpg.mypertamina.id).  
-Aplikasi ini mengotomatisasi login, navigasi, dan pengambilan laporan menggunakan Selenium WebDriver.
+SnapFlux adalah aplikasi untuk automated web scraping dan data extraction dari portal [subsiditepatlpg.mypertamina.id](https://subsiditepatlpg.mypertamina.id). Aplikasi ini mengotomatisasi login, navigasi, dan pengambilan laporan menggunakan Selenium WebDriver.
 
 ## 🚀 Key Features
 
@@ -20,10 +19,10 @@ Aplikasi ini mengotomatisasi login, navigasi, dan pengambilan laporan menggunaka
 
 ### 🆕 Enhanced Enterprise Features (v2.0)
 
-- **Environment Configuration Management** - Configuration via environment variables dan YAML
+- **Environment Configuration Management** - Configuration via environment variables (optional YAML)
 - **Comprehensive Error Handling** - Custom exceptions dan retry mechanism dengan exponential backoff
 - **Security Improvements** - Credential encryption dan input sanitization
-- **Basic Testing Framework** - Unit dan integration tests untuk code reliability
+- **Basic Testing Framework** - Unit tests
 - **Advanced Logging** - Structured logging dengan rotating file handler
 
 ## 🛠️ Technical Stack
@@ -32,9 +31,8 @@ Aplikasi ini mengotomatisasi login, navigasi, dan pengambilan laporan menggunaka
 - **Framework**: Selenium WebDriver
 - **Browser**: Chrome/Chromium (bundled)
 - **Data Export**: pandas + openpyxl
-- **Configuration**: YAML + Environment Variables
-- **Security**: cryptography (Fernet encryption)
-- **Testing**: pytest + coverage reporting
+- **Configuration**: YAML (optional) + Environment Variables
+- **Testing**: pytest
 - **Platform**: Windows
 
 ## 🚀 Quick Start
@@ -65,33 +63,6 @@ cp config.yaml.example config.yaml
 
 ```bash
 python main.py
-```
-
-## 📁 Project Structure
-
-```
-SnapFlux-Scraping-App-For-Merchant-Apps-Pertamina/
-├── main.py                 # Main entry point
-├── src/                    # Source code
-│   ├── login_handler.py    # Login automation logic
-│   ├── utils.py            # Utility functions
-│   ├── driver_setup.py     # WebDriver configuration
-│   ├── config_manager.py   # Environment configuration (NEW)
-│   ├── exceptions.py       # Custom exceptions (NEW)
-│   ├── error_handler.py    # Enhanced error handling (NEW)
-│   ├── security.py         # Security utilities (NEW)
-│   └── validators.py       # Input validation
-├── tests/                  # Testing framework (NEW)
-│   ├── unit/               # Unit tests
-│   └── integration/        # Integration tests
-├── akun/                   # Account data (see .gitignore)
-│   └── akun.xlsx.example   # Account template
-├── results/                # Output Excel files (see .gitignore)
-├── logs/                   # Automation logs (see .gitignore)
-├── env.example             # Environment variables template (NEW)
-├── config.yaml             # Configuration file
-├── requirements.txt        # Python dependencies
-└── README.md               # This file
 ```
 
 ## ⚙️ Configuration
@@ -180,7 +151,8 @@ pip install -r requirements.txt
 - **error_handler.py** - Comprehensive error handling dengan retry mechanism
 - **exceptions.py** - Custom exception classes untuk better error tracking
 - **security.py** - Credential encryption dan input sanitization
-- **tests/** - Unit dan integration testing framework
+- **validators.py** - Input validation functions
+- **tests/** - Unit testing framework
 
 ## 📊 Features in Detail
 
@@ -193,10 +165,10 @@ pip install -r requirements.txt
 
 ### Enhanced Enterprise Features (v2.0)
 
-- **Environment Configuration**: Flexible configuration via `.env` files
+- **Environment Configuration**: Flexible configuration via `.env` files (optional YAML)
 - **Advanced Error Handling**: Custom exceptions dengan retry mechanism dan exponential backoff
 - **Security Features**: Credential encryption dan input sanitization
-- **Testing Framework**: Comprehensive unit dan integration tests
+- **Testing Framework**: Unit tests dengan test fixtures
 - **Structured Logging**: Rotating log files dengan proper error tracking
 
 ## 🆕 What's New in v2.0
@@ -208,7 +180,7 @@ Project ini telah ditingkatkan dengan 4 major enhancements untuk mencapai standa
 1. **🌍 Environment Configuration Management**
 
    - Configuration via environment variables (`.env` file)
-   - YAML configuration support untuk advanced settings
+   - Optional YAML configuration support untuk advanced settings
    - Fallback strategy untuk backward compatibility
 
 2. **🛡️ Comprehensive Error Handling**
@@ -219,13 +191,12 @@ Project ini telah ditingkatkan dengan 4 major enhancements untuk mencapai standa
 
 3. **🔒 Security Improvements**
 
-   - Credential encryption dengan Fernet cryptography
+   - Optional credential encryption dengan Fernet cryptography
    - Input sanitization untuk mencegah injection attacks
    - PIN validation dengan weak PIN detection
 
 4. **🧪 Basic Testing Framework**
    - Unit tests untuk validator functions
-   - Integration tests untuk configuration management
    - Test fixtures dan mock objects untuk reliable testing
 
 ### Backward Compatibility

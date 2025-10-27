@@ -543,6 +543,15 @@ def get_customer_list_direct(driver, pin):
                                         if transaksi_per_jenis:
                                             print(f"   📊 Summary Pembelian:")
                                             
+                                            # Tampilkan detail transaksi untuk analisis
+                                            if detail_info.get('riwayat'):
+                                                print(f"   📋 Detail Riwayat Transaksi:")
+                                                riwayat_count = 0
+                                                for text in detail_info['riwayat'][:10]:  # Batasi untuk readability
+                                                    if 'Tabung LPG' in text or 'Rumah Tangga' in text or 'Rp' in text:
+                                                        riwayat_count += 1
+                                                        print(f"      {riwayat_count}. {text}")
+                                            
                                             # Cek apakah ada "Usaha Mikro" - jika ya, skip
                                             if 'Usaha Mikro' in transaksi_per_jenis:
                                                 print(f"   ⏭️ Skip {customer['name']} - Jenis Usaha Mikro")
@@ -553,15 +562,44 @@ def get_customer_list_direct(driver, pin):
                                             
                                             # Focus hanya pada "Rumah Tangga"
                                             rumah_tangga_data = transaksi_per_jenis.get('Rumah Tangga')
-                                            if rumah_tangga_data and rumah_tangga_data['jumlah_transaksi'] > 1:
+                                            if rumah_tangga_data and rumah_tangga_data['jumlah_tabung'] > 1:
                                                 print(f"   🎯 Focus pada Rumah Tangga: {rumah_tangga_data['jumlah_tabung']} tabung")
                                                 
-                                                # Klik transaksi Rumah Tangga pertama dan batalkan
-                                                cancel_result = click_rumah_tangga_transaction(driver, pin)
-                                                if cancel_result:
-                                                    print(f"   ✅ Berhasil membatalkan transaksi untuk {customer['name']}")
+                                                # ANALISIS SKENARIO PEMBATALAN BERDASARKAN JUMLAH INPUTAN
+                                                jumlah_transaksi = rumah_tangga_data['jumlah_transaksi']
+                                                jumlah_tabung = rumah_tangga_data['jumlah_tabung']
+                                                
+                                                if jumlah_transaksi == 1 and jumlah_tabung > 1:
+                                                    # SKENARIO 1: 2 TABUNG - 1 INPUTAN (SALAH INPUTAN)
+                                                    print(f"   🔍 SKENARIO 1: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
+                                                    print(f"   📋 AKSI: BATALKAN SEMUA (Salah Inputan - seharusnya 1 tabung)")
+                                                    
+                                                    # Batalkan transaksi tunggal yang salah inputan
+                                                    cancel_result = click_rumah_tangga_transaction(driver, pin)
+                                                    if cancel_result:
+                                                        print(f"   ✅ Berhasil membatalkan transaksi salah inputan untuk {customer['name']}")
+                                                    else:
+                                                        print(f"   ❌ Gagal membatalkan transaksi salah inputan untuk {customer['name']}")
+                                                
+                                                elif jumlah_transaksi > 1 and jumlah_tabung > 1:
+                                                    # SKENARIO 2: 2 TABUNG - 2 INPUTAN (DUPLIKASI INPUTAN)
+                                                    print(f"   🔍 SKENARIO 2: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
+                                                    print(f"   📋 AKSI: BATALKAN SALAH SATU (Duplikasi Inputan)")
+                                                    
+                                                    # Batalkan salah satu transaksi (yang pertama)
+                                                    cancel_result = click_rumah_tangga_transaction(driver, pin)
+                                                    if cancel_result:
+                                                        print(f"   ✅ Berhasil membatalkan salah satu transaksi duplikasi untuk {customer['name']}")
+                                                    else:
+                                                        print(f"   ❌ Gagal membatalkan transaksi duplikasi untuk {customer['name']}")
+                                                
                                                 else:
-                                                    print(f"   ❌ Gagal membatalkan transaksi untuk {customer['name']}")
+                                                    # SKENARIO LAIN: Tidak perlu dibatalkan
+                                                    print(f"   ⏭️ SKENARIO LAIN: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
+                                                    print(f"   📋 AKSI: SKIP (Tidak perlu dibatalkan)")
+                                                    driver.back()
+                                                    time.sleep(2.0)
+                                                    continue
                                                 
                                             # Tampilkan summary untuk jenis lain
                                             for jenis, data in transaksi_per_jenis.items():
