@@ -1,39 +1,40 @@
 # SnapFlux Automation v2.0
 
-Automation script untuk mengambil data transaksi dari platform Snapflux menggunakan Selenium WebDriver dengan enhanced features untuk standar perusahaan.
+Automated web scraping and data extraction tool for SnapFlux merchant platform using Selenium WebDriver with enterprise-grade features and optimized performance.
 
 ## 📋 Description
 
-SnapFlux adalah aplikasi untuk automated web scraping dan data extraction dari portal [subsiditepatlpg.mypertamina.id](https://subsiditepatlpg.mypertamina.id). Aplikasi ini mengotomatisasi login, navigasi, dan pengambilan laporan menggunakan Selenium WebDriver.
+SnapFlux is an automated web scraping and data extraction application for the [subsiditepatlpg.mypertamina.id](https://subsiditepatlpg.mypertamina.id) merchant platform. This application automates login, navigation, and report extraction using Selenium WebDriver with optimized performance and enterprise-grade features.
 
 ## 🚀 Key Features
 
 ### Core Automation Features
 
-- **Automated Login & Navigation** - Login otomatis ke portal merchant
-- **Data Extraction** - Ekstraksi data penjualan dengan status dan timestamp
-- **Excel Export** - Export hasil ke format Excel dengan struktur yang rapi
-- **Headless Mode** - Mode tanpa GUI untuk performa optimal
+- **Automated Login & Navigation** - Automatic login to merchant portal with optimized selectors
+- **Data Extraction** - Sales data extraction with status tracking and timestamps
+- **Excel Export** - Export results to Excel format with clean structure
+- **Headless Mode** - GUI-less mode for optimal performance
+- **Optimized Performance** - Direct selectors and streamlined code for faster execution
 
 ### 📋 Main Menu Options
 
-1. **Check Stok** - Automated stock monitoring dan penjualan tracking
-   - Automatic stock data retrieval dari dashboard
-   - Penjualan tracking dengan filter tanggal opsional
-   - Excel export dengan format pivot yang rapi
+1. **Check Stok** - Automated stock monitoring and sales tracking
+   - Automatic stock data retrieval from dashboard
+   - Sales tracking with optional date filtering
+   - Excel export with clean pivot format
 2. **Batalkan Inputan** ⭐ NEW in v2
-   - Navigasi ke Rekap Penjualan
-   - Menampilkan list pembeli dari sistem
-   - Support filter tanggal untuk pencarian spesifik
-   - Fitur ini tidak tersedia di v1
+   - Navigate to Sales Summary (Rekap Penjualan)
+   - Display customer list from the system
+   - Support date filtering for specific data search
+   - Transaction cancellation workflow for duplicate entries
 
 ### 🆕 Enhanced Enterprise Features (v2.0)
 
 - **Environment Configuration Management** - Configuration via environment variables (optional YAML)
-- **Comprehensive Error Handling** - Custom exceptions dan retry mechanism dengan exponential backoff
-- **Security Improvements** - Credential encryption dan input sanitization
-- **Basic Testing Framework** - Unit tests
-- **Advanced Logging** - Structured logging dengan rotating file handler
+- **Streamlined Codebase** - Removed unused modules for better performance and maintainability
+- **Direct Selector Optimization** - Hardcoded selectors for faster element detection
+- **Advanced Logging** - Structured logging with rotating file handler
+- **Comprehensive Error Handling** - Robust error handling with retry mechanisms
 
 ## 🛠️ Technical Stack
 
@@ -60,7 +61,7 @@ pip install -r requirements.txt
 ```bash
 # Setup environment configuration (recommended)
 cp env.example .env
-# Edit .env dengan path dan konfigurasi Anda
+# Edit .env with your paths and configuration
 
 # Setup account data (edit with your credentials)
 cp akun/akun.xlsx.example akun/akun.xlsx
@@ -79,7 +80,7 @@ python main.py
 
 ### Environment Variables (.env)
 
-Copy `env.example` ke `.env` dan edit dengan konfigurasi Anda:
+Copy `env.example` to `.env` and edit with your configuration:
 
 ```bash
 # Browser Configuration
@@ -98,15 +99,15 @@ ENCRYPTION_KEY=your-encryption-key-here
 
 ### Account Configuration
 
-Edit `akun/akun.xlsx` dengan:
+Edit `akun/akun.xlsx` with:
 
-- Nama pangkalan
+- Pangkalan name
 - Username (email/phone)
 - PIN credentials
 
 ### Advanced Configuration (Optional)
 
-Edit `config.yaml` untuk advanced settings jika diperlukan.
+Edit `config.yaml` for advanced settings if needed.
 
 ## 💻 System Requirements
 
@@ -123,15 +124,15 @@ Edit `config.yaml` untuk advanced settings jika diperlukan.
 - **OS**: Windows 11
 - **Python**: 3.9+
 - **RAM**: 8+ GB
-- **Storage**: SSD dengan ≥ 5 GB free space
+- **Storage**: SSD with ≥ 5 GB free space
 - **Network**: ≥ 10 Mbps stable connection
 
 ## 🔒 Security & Privacy
 
-- **Account files** (`akun.xlsx`) tidak di-commit untuk keamanan
-- **Browser profiles** dan cache tidak disimpan di Git
-- **Log files** berisi informasi sensitif tidak di-upload
-- **Template files** (`.example`) digunakan untuk konfigurasi
+- **Account files** (`akun.xlsx`) are not committed for security
+- **Browser profiles** and cache are not stored in Git
+- **Log files** contain sensitive information and are not uploaded
+- **Template files** (`.example`) are used for configuration
 
 ## 🛠️ Development
 
@@ -143,7 +144,6 @@ pip install -r requirements.txt
 
 # Enhanced features dependencies (auto-included):
 # - pyyaml>=6.0.0 (Configuration management)
-# - cryptography>=3.4.8 (Security encryption)
 # - python-dotenv>=0.19.0 (Environment variables)
 ```
 
@@ -158,77 +158,94 @@ pip install -r requirements.txt
 #### Enhanced Components (v2.0)
 
 - **config_manager.py** - Environment & YAML configuration management
-- **error_handler.py** - Comprehensive error handling dengan retry mechanism
-- **exceptions.py** - Custom exception classes untuk better error tracking
-- **security.py** - Credential encryption dan input sanitization
 - **validators.py** - Input validation functions
 - **tests/** - Unit testing framework
+- **Streamlined Architecture** - Removed unused modules for better performance
 
 ## 📊 Features in Detail
 
 ### Feature 1: Check Stok
 
-- **Stock Monitoring**: Automatic stock data retrieval dari dashboard
-- **Sales Tracking**: Data tabung terjual dengan format "X Tabung"
-- **Date Filtering**: Filter reports by specific date ranges (opsional)
+- **Stock Monitoring**: Automatic stock data retrieval from dashboard
+- **Sales Tracking**: Sales data with "X Tabung" format
+- **Date Filtering**: Filter reports by specific date ranges (optional)
 - **Status Detection**: Auto-detect status (Ada Penjualan/Tidak Ada Penjualan)
-- **Excel Export**: Export hasil ke Excel dengan format pivot yang rapi
-- **Progress Tracking**: Real-time progress monitoring dengan detailed logging
+- **Excel Export**: Export results to Excel with clean pivot format
+- **Progress Tracking**: Real-time progress monitoring with detailed logging
 
 ### Feature 2: Batalkan Inputan (NEW in v2)
 
-- **Rekap Penjualan Navigation**: Otomatis navigasi ke halaman Rekap Penjualan
-- **Customer List Display**: Menampilkan list pembeli dari Rekap Penjualan
-- **Date Filtering**: Support filter tanggal untuk pencarian data spesifik
-- **Real-time Data**: Live data retrieval dari sistem merchant
-- **Terminal Display**: Menampilkan hasil langsung di terminal dengan format rapi
-- **Status Tracking**: Track sukses/gagal untuk setiap akun yang diproses
+- **Sales Summary Navigation**: Automatic navigation to Sales Summary (Rekap Penjualan) page
+- **Customer List Display**: Display customer list from Sales Summary
+- **Date Filtering**: Support date filtering for specific data search
+- **Transaction Cancellation**: Workflow for canceling duplicate transactions
+- **Real-time Data**: Live data retrieval from merchant system
+- **Terminal Display**: Display results directly in terminal with clean format
+- **Status Tracking**: Track success/failure for each processed account
 
-> **Note**: Fitur Batalkan Inputan tidak tersedia di v1 dan merupakan fitur eksklusif v2.0
+> **Note**: Batalkan Inputan feature is not available in v1 and is exclusive to v2.0
 
 ### Enhanced Enterprise Features (v2.0)
 
 - **Environment Configuration**: Flexible configuration via `.env` files (optional YAML)
-- **Advanced Error Handling**: Custom exceptions dengan retry mechanism dan exponential backoff
-- **Security Features**: Credential encryption dan input sanitization
-- **Testing Framework**: Unit tests dengan test fixtures
-- **Structured Logging**: Rotating log files dengan proper error tracking
+- **Streamlined Codebase**: Removed unused modules for better performance and maintainability
+- **Direct Selector Optimization**: Hardcoded selectors for faster element detection
+- **Testing Framework**: Unit tests with test fixtures
+- **Structured Logging**: Rotating log files with proper error tracking
 
 ## 🆕 What's New in v2.0
 
 ### Major Features Added
 
-1. **🆕 Fitur Batalkan Inputan** - Fitur baru untuk navigasi ke Rekap Penjualan dan menampilkan list pembeli (tidak tersedia di v1)
+1. **🆕 Batalkan Inputan Feature** - New feature for Sales Summary navigation and customer list display (not available in v1)
+2. **🚀 Performance Optimization** - Streamlined codebase with removed unused modules
+3. **⚡ Direct Selector Implementation** - Hardcoded selectors for faster element detection
 
 ### Enterprise-Grade Improvements
 
-Project ini telah ditingkatkan dengan 4 major enhancements untuk mencapai standar perusahaan:
+This project has been enhanced with major improvements to achieve enterprise standards:
 
 1. **🌍 Environment Configuration Management**
 
    - Configuration via environment variables (`.env` file)
-   - Optional YAML configuration support untuk advanced settings
-   - Fallback strategy untuk backward compatibility
+   - Optional YAML configuration support for advanced settings
+   - Fallback strategy for backward compatibility
 
-2. **🛡️ Comprehensive Error Handling**
+2. **🚀 Performance Optimization**
 
-   - Custom exception classes (`AuthenticationError`, `NavigationError`, etc.)
-   - Retry mechanism dengan exponential backoff
-   - Context logging untuk operation tracking
+   - Removed unused modules (`error_handler.py`, `exceptions.py`, `security.py`, `selectors.py`)
+   - Direct hardcoded selectors for faster element detection
+   - Streamlined codebase for better maintainability
 
-3. **🔒 Security Improvements**
+3. **🧪 Testing Framework**
 
-   - Optional credential encryption dengan Fernet cryptography
-   - Input sanitization untuk mencegah injection attacks
-   - PIN validation dengan weak PIN detection
+   - Unit tests for validator functions
+   - Test fixtures and mock objects for reliable testing
 
-4. **🧪 Basic Testing Framework**
-   - Unit tests untuk validator functions
-   - Test fixtures dan mock objects untuk reliable testing
+4. **📊 Advanced Logging**
+
+   - Structured logging with rotating file handler
+   - Comprehensive error tracking and debugging
 
 ### Backward Compatibility
 
-Semua enhancement features adalah **optional** dan tidak mengubah fungsi existing. Project tetap berfungsi dengan konfigurasi original jika enhanced features tidak digunakan.
+All enhancement features are **optional** and do not change existing functionality. The project continues to work with original configuration if enhanced features are not used.
+
+## 🚀 Performance Improvements (v2.0)
+
+### Code Optimization
+
+- **Removed Unused Modules**: Eliminated 4 unused files (`error_handler.py`, `exceptions.py`, `security.py`, `selectors.py`)
+- **Direct Selectors**: Replaced dynamic selector classes with hardcoded selectors for faster element detection
+- **Streamlined Architecture**: Reduced codebase complexity by ~500+ lines
+- **Faster Execution**: Optimized element detection and navigation processes
+
+### Performance Benefits
+
+- **⚡ Faster Startup**: Reduced import time and memory usage
+- **🎯 Direct Element Access**: Hardcoded selectors eliminate selector search overhead
+- **🧹 Cleaner Codebase**: Easier maintenance and debugging
+- **📦 Smaller Footprint**: Reduced file count and complexity
 
 ## 🤝 Contributing
 
