@@ -9,12 +9,8 @@ import os
 import logging
 
 # Import enhanced error handling (backward compatible)
-try:
-    from .error_handler import handle_selenium_errors
-    from .exceptions import DriverSetupError
-    ENHANCED_ERROR_HANDLING = True
-except ImportError:
-    ENHANCED_ERROR_HANDLING = False
+# Error handling removed - using standard exception handling
+ENHANCED_ERROR_HANDLING = False
 
 # Setup logging untuk tracking error driver
 logger = logging.getLogger('driver_setup')
@@ -160,8 +156,8 @@ def setup_driver(headless=False):
         # Enhanced error handling jika tersedia
         if ENHANCED_ERROR_HANDLING:
             try:
-                raise DriverSetupError(f"Failed to setup Chrome WebDriver: {str(e)}")
-            except DriverSetupError:
+                raise Exception(f"Failed to setup Chrome WebDriver: {str(e)}")
+            except Exception:
                 return None
         
         return None

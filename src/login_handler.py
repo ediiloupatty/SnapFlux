@@ -7,7 +7,6 @@ from selenium.webdriver.common.by import By
 import logging
 
 from .constants import LOGIN_URL, DEFAULT_DELAY
-from .selectors import LoginSelectors, InputSelectors
 from .driver_setup import setup_driver
 
 # Import enhanced configuration (backward compatible)
@@ -57,13 +56,13 @@ def login_direct(username, pin):
         
         # Langsung cari dan isi email
         print("📧 Mencari dan mengisi field email...")
-        email_inputs = driver.find_elements(LoginSelectors.EMAIL_INPUT[0], LoginSelectors.EMAIL_INPUT[1])
+        email_inputs = driver.find_elements(By.TAG_NAME, "input")
         
         email_filled = False
         for input_field in email_inputs:
             try:
                 input_type = input_field.get_attribute("type")
-                if input_type in InputSelectors.EMAIL_TYPES:
+                if input_type in ["text", "email"]:
                     if input_field.is_displayed() and input_field.is_enabled():
                         input_field.clear()
                         input_field.send_keys(username)
@@ -79,13 +78,13 @@ def login_direct(username, pin):
         
         # Langsung cari dan isi PIN
         print("🔑 Mencari dan mengisi field PIN...")
-        pin_inputs = driver.find_elements(LoginSelectors.PIN_INPUT[0], LoginSelectors.PIN_INPUT[1])
+        pin_inputs = driver.find_elements(By.TAG_NAME, "input")
         
         pin_filled = False
         for input_field in pin_inputs:
             try:
                 input_type = input_field.get_attribute("type")
-                if input_type == InputSelectors.PASSWORD_TYPE:
+                if input_type == "password":
                     if input_field.is_displayed() and input_field.is_enabled():
                         input_field.clear()
                         input_field.send_keys(pin)
@@ -101,13 +100,13 @@ def login_direct(username, pin):
         
         # Langsung cari dan klik tombol login
         print("🚀 Mencari dan mengklik tombol login...")
-        login_buttons = driver.find_elements(LoginSelectors.LOGIN_BUTTON[0], LoginSelectors.LOGIN_BUTTON[1])
+        login_buttons = driver.find_elements(By.TAG_NAME, "button")
         
         login_clicked = False
         for button in login_buttons:
             try:
                 button_text = button.text.strip().upper()
-                if any(text in button_text for text in InputSelectors.BUTTON_TEXTS):
+                if any(text in button_text for text in ["MASUK", "LOGIN"]):
                     if button.is_displayed() and button.is_enabled():
                         button.click()
                         print("✅ Tombol login berhasil diklik")
@@ -128,7 +127,7 @@ def login_direct(username, pin):
         
         try:
             # Super cepat: langsung cek dengan find_element, jika tidak ada langsung lanjut
-            error_element = driver.find_element(LoginSelectors.GAGAL_MASUK_ERROR[0], LoginSelectors.GAGAL_MASUK_ERROR[1])
+            error_element = driver.find_element(By.XPATH, "//h5[contains(@class, 'mantine-Title-root') and text()='Gagal Masuk Akun']")
             if error_element:
                 gagal_masuk_detected = True
                 print("❌ PESAN 'GAGAL MASUK AKUN' TERDETEKSI!")
@@ -163,7 +162,7 @@ def login_direct(username, pin):
                     for button in login_buttons[:5]:  # Limit hanya 5 button pertama
                         try:
                             button_text = button.text.strip().upper()
-                            if any(text in button_text for text in InputSelectors.BUTTON_TEXTS):
+                            if any(text in button_text for text in ["MASUK", "LOGIN"]):
                                 if button.is_displayed() and button.is_enabled():
                                     button.click()
                                     print("✅ Tombol MASUK berhasil diklik lagi!")
@@ -602,7 +601,7 @@ def get_customer_list_direct(driver, pin):
                                     element_text = element.text.strip()
                                     if customer['name'] in element_text and len(element_text) < 100:  # Pastikan ini nama, bukan teks panjang
                                         print(f"🖱️ Mengklik: {customer['name']} ({customer['tabung']} Tabung)")
-                                        print(f"🔍 Debug Customer Click 1: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                                        print(f"🔍 Debug Customer Click 1: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
                                         element.click()
                                         print(f"🔍 Debug Customer Click Success: XPath='//*[contains(text(), '{customer['name']}')]'")
                                         
@@ -757,9 +756,8 @@ def get_customer_list_direct(driver, pin):
 
 def click_rumah_tangga_transaction(driver, pin):
     """
-    Mengklik transaksi Rumah Tangga pertama untuk masuk ke halaman detail transaksi
-    Menggunakan berbagai metode pencarian untuk memastikan berhasil
-    Kemudian melakukan pembatalan transaksi
+    Mengklik transaksi Rumah Tangga dengan optimasi langsung ke element ke-2
+    Berdasarkan terminal output: Element ke-2 SELALU BERHASIL!
     
     Args:
         driver: WebDriver object yang sudah berada di halaman detail pelanggan
@@ -778,19 +776,22 @@ def click_rumah_tangga_transaction(driver, pin):
         current_url = driver.current_url
         print(f"🔍 Debug: URL saat ini: {current_url}")
         
-        # Metode 1: Cari elemen dengan teks "Rumah Tangga" dan klik parent
-        print(f"🔍 Debug: Metode 1 - Mencari elemen 'Rumah Tangga'...")
+        # OPTIMASI: Langsung ambil element ke-2 yang selalu berhasil berdasarkan terminal output
+        print(f"🔍 Debug: Metode Optimasi - Langsung ambil element ke-2...")
         rumah_tangga_elements = driver.find_elements(By.XPATH, "//*[text()='Rumah Tangga']")
         print(f"🔍 Debug: Ditemukan {len(rumah_tangga_elements)} elemen 'Rumah Tangga'")
         
-        for i, element in enumerate(rumah_tangga_elements):
+        # Berdasarkan terminal output: Element ke-2 (index 1) SELALU BERHASIL!
+        if len(rumah_tangga_elements) >= 2:
             try:
-                print(f"🔍 Debug: Elemen {i+1}: Tag={element.tag_name}, Class={element.get_attribute('class')}")
+                target_element = rumah_tangga_elements[1]  # Element ke-2 (index 1)
+                print(f"🔍 Debug Rumah Tangga Optimasi: Text='Rumah Tangga', Tag={target_element.tag_name}, Class={target_element.get_attribute('class')}, ID={target_element.get_attribute('id')}, Location={target_element.location}, Size={target_element.size}")
                 
-                # Coba klik parent element
-                parent = element.find_element(By.XPATH, "..")
+                # Klik parent element dari element ke-2
+                parent = target_element.find_element(By.XPATH, "..")
                 if parent.is_displayed() and parent.is_enabled():
-                    print(f"🖱️ Mengklik parent element dari Rumah Tangga (metode 1)...")
+                    print(f"🖱️ Mengklik parent element dari Rumah Tangga (element ke-2)...")
+                    print(f"🔍 Debug Rumah Tangga Optimasi Success: XPath='//*[text()='Rumah Tangga'][2]/..'")
                     parent.click()
                     time.sleep(3.0)
                     
@@ -799,83 +800,43 @@ def click_rumah_tangga_transaction(driver, pin):
                         # Lakukan pembatalan transaksi
                         cancel_result = cancel_transaction(driver, pin)
                         return cancel_result
-                        
+                    else:
+                        print(f"⚠️ Tidak berhasil masuk ke halaman detail transaksi dengan element ke-2")
+                else:
+                    print(f"❌ Parent element ke-2 tidak dapat diklik")
             except Exception as e:
-                print(f"🔍 Debug: Error dengan elemen {i+1}: {str(e)}")
-                continue
+                print(f"🔍 Debug: Error dengan element ke-2: {str(e)}")
+        else:
+            print(f"❌ Tidak ditemukan minimal 2 elemen 'Rumah Tangga'")
         
-        # Metode 2: Cari elemen yang mengandung "Tabung LPG" dan "Rumah Tangga"
-        print(f"🔍 Debug: Metode 2 - Mencari elemen dengan 'Tabung LPG' dan 'Rumah Tangga'...")
-        tabung_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Tabung LPG')]")
-        print(f"🔍 Debug: Ditemukan {len(tabung_elements)} elemen 'Tabung LPG'")
-        
-        for i, element in enumerate(tabung_elements):
+        # FALLBACK: Jika element ke-2 gagal, coba element ke-1
+        print(f"🔄 Fallback: Mencoba element ke-1...")
+        if len(rumah_tangga_elements) >= 1:
             try:
-                element_text = element.text.strip()
-                print(f"🔍 Debug: Elemen {i+1}: '{element_text[:100]}...'")
+                target_element = rumah_tangga_elements[0]  # Element ke-1 (index 0)
+                print(f"🔍 Debug Rumah Tangga Fallback: Text='Rumah Tangga', Tag={target_element.tag_name}, Class={target_element.get_attribute('class')}, ID={target_element.get_attribute('id')}, Location={target_element.location}, Size={target_element.size}")
                 
-                if 'Rumah Tangga' in element_text and element.is_displayed() and element.is_enabled():
-                    print(f"🖱️ Mengklik elemen Tabung LPG dengan Rumah Tangga (metode 2)...")
-                    element.click()
+                # Klik parent element dari element ke-1
+                parent = target_element.find_element(By.XPATH, "..")
+                if parent.is_displayed() and parent.is_enabled():
+                    print(f"🖱️ Mengklik parent element dari Rumah Tangga (element ke-1 fallback)...")
+                    print(f"🔍 Debug Rumah Tangga Fallback Success: XPath='//*[text()='Rumah Tangga'][1]/..'")
+                    parent.click()
                     time.sleep(3.0)
                     
+                    # Verifikasi navigasi dan lakukan pembatalan
                     if verify_transaction_detail_page(driver):
                         # Lakukan pembatalan transaksi
                         cancel_result = cancel_transaction(driver, pin)
                         return cancel_result
-                        
+                    else:
+                        print(f"⚠️ Tidak berhasil masuk ke halaman detail transaksi dengan element ke-1")
+                else:
+                    print(f"❌ Parent element ke-1 tidak dapat diklik")
             except Exception as e:
-                print(f"🔍 Debug: Error dengan elemen Tabung LPG {i+1}: {str(e)}")
-                continue
+                print(f"🔍 Debug: Error dengan element ke-1: {str(e)}")
         
-        # Metode 3: Cari elemen dengan harga "Rp19" dan "Rumah Tangga"
-        print(f"🔍 Debug: Metode 3 - Mencari elemen dengan 'Rp19' dan 'Rumah Tangga'...")
-        harga_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Rp19')]")
-        print(f"🔍 Debug: Ditemukan {len(harga_elements)} elemen 'Rp19'")
-        
-        for i, element in enumerate(harga_elements):
-            try:
-                element_text = element.text.strip()
-                print(f"🔍 Debug: Elemen {i+1}: '{element_text[:100]}...'")
-                
-                if 'Rumah Tangga' in element_text and element.is_displayed() and element.is_enabled():
-                    print(f"🖱️ Mengklik elemen harga dengan Rumah Tangga (metode 3)...")
-                    element.click()
-                    time.sleep(3.0)
-                    
-                    if verify_transaction_detail_page(driver):
-                        # Lakukan pembatalan transaksi
-                        cancel_result = cancel_transaction(driver, pin)
-                        return cancel_result
-                        
-            except Exception as e:
-                print(f"🔍 Debug: Error dengan elemen harga {i+1}: {str(e)}")
-                continue
-        
-        # Metode 4: Cari semua elemen yang bisa diklik dan cek isinya
-        print(f"🔍 Debug: Metode 4 - Mencari semua elemen yang bisa diklik...")
-        clickable_elements = driver.find_elements(By.XPATH, "//*[@onclick or @href or contains(@class, 'click') or contains(@class, 'btn') or contains(@class, 'card')]")
-        print(f"🔍 Debug: Ditemukan {len(clickable_elements)} elemen yang bisa diklik")
-        
-        for i, element in enumerate(clickable_elements[:10]):  # Batasi untuk performa
-            try:
-                element_text = element.text.strip()
-                if len(element_text) > 20 and 'Rumah Tangga' in element_text:
-                    print(f"🔍 Debug: Elemen clickable {i+1}: '{element_text[:100]}...'")
-                    
-                    if element.is_displayed() and element.is_enabled():
-                        print(f"🖱️ Mengklik elemen clickable dengan Rumah Tangga (metode 4)...")
-                        element.click()
-                        time.sleep(3.0)
-                        
-                        if verify_transaction_detail_page(driver):
-                            return True
-                            
-            except Exception as e:
-                print(f"🔍 Debug: Error dengan elemen clickable {i+1}: {str(e)}")
-                continue
-        
-        print(f"❌ Semua metode gagal menemukan transaksi Rumah Tangga yang bisa diklik")
+        print(f"❌ Semua metode optimasi gagal menemukan transaksi Rumah Tangga yang bisa diklik")
         return False
         
     except Exception as e:
@@ -926,13 +887,8 @@ def verify_transaction_detail_page(driver):
 
 def cancel_transaction(driver, pin):
     """
-    Membatalkan transaksi dengan langkah-langkah:
-    1. Klik "Rincian"
-    2. Klik "Batalkan"
-    3. Klik "YA, BATALKAN TRANSAKSI"
-    4. Isi alasan pembatalan: "Salah Inputan"
-    5. Isi PIN
-    6. Klik "BATALKAN TRANSAKSI"
+    Membatalkan transaksi dengan direct class/name selector tanpa iterasi
+    Berdasarkan terminal output: Semua button berhasil dengan selector langsung
     
     Args:
         driver: WebDriver object yang sudah berada di halaman detail transaksi
@@ -947,194 +903,294 @@ def cancel_transaction(driver, pin):
         # Ambil informasi detail transaksi terlebih dahulu
         get_transaction_detail_info(driver)
         
-        # Langkah 1: Klik "Rincian" terlebih dahulu
+        # === LANGKAH 1: Klik "Rincian" dengan direct class selector ===
         print(f"🔍 Langkah 1: Mencari dan mengklik 'Rincian'...")
-        rincian_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Rincian')]")
-        
-        rincian_clicked = False
-        for i, element in enumerate(rincian_elements):
+        try:
+            # Direct class selector berdasarkan terminal output
+            element = driver.find_element(By.CLASS_NAME, "styles_btnDetail__OqNm0")
+            text = element.text.strip()
+            print(f"🔍 Debug Rincian 1: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+            
+            if element.is_displayed() and element.is_enabled():
+                print(f"🖱️ Mengklik 'Rincian'...")
+                print(f"🔍 Debug Rincian Success: Class='styles_btnDetail__OqNm0'")
+                element.click()
+                time.sleep(2.0)
+            else:
+                print(f"❌ Elemen Rincian tidak dapat diklik")
+                return False
+        except Exception as e:
+            print(f"❌ Error dengan direct class selector: {str(e)}")
+            print("🔄 Mencoba dengan XPath fallback...")
+            
+            # Fallback: XPath text-based
             try:
-                element_text = element.text.strip()
-                print(f"🔍 Debug Rincian {i+1}: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
-                
-                if element_text == "Rincian" and element.is_displayed() and element.is_enabled():
-                    print(f"🖱️ Mengklik 'Rincian'...")
-                    print(f"🔍 Debug Rincian Success: XPath='//*[contains(text(), 'Rincian')][{i+1}]'")
-                    element.click()
-                    time.sleep(2.0)
-                    rincian_clicked = True
-                    break
-            except Exception as e:
-                print(f"🔍 Debug Rincian Error {i+1}: {str(e)}")
-                continue
-        
-        if not rincian_clicked:
-            print(f"❌ Tidak ditemukan tombol 'Rincian'")
-            return False
-        
-        # Langkah 2: Cari dan klik tombol "Batalkan"
-        print(f"🔍 Langkah 2: Mencari tombol 'Batalkan'...")
-        
-        # Cari tombol "Batalkan" dengan berbagai cara
-        batalkan_selectors = [
-            "//*[contains(text(), 'Batalkan')]",
-            "//*[text()='Batalkan']",
-            "//button[contains(text(), 'Batalkan')]",
-            "//div[contains(text(), 'Batalkan')]",
-            "//span[contains(text(), 'Batalkan')]"
-        ]
-        
-        batalkan_clicked = False
-        for selector in batalkan_selectors:
-            try:
-                batalkan_elements = driver.find_elements(By.XPATH, selector)
-                print(f"🔍 Debug: Selector '{selector}' menemukan {len(batalkan_elements)} elemen")
-                
-                for j, element in enumerate(batalkan_elements):
-                    try:
-                        element_text = element.text.strip()
-                        print(f"🔍 Debug Batalkan {j+1}: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
-                        
-                        # Cek apakah ini tombol "BATALKAN" yang benar
-                        if (element_text == "BATALKAN" and 
-                            element.is_displayed() and 
-                            element.is_enabled()):
-                            print(f"🖱️ Mengklik tombol 'BATALKAN'...")
-                            print(f"🔍 Debug Batalkan Success: XPath='{selector}[{j+1}]'")
-                            
-                            # Scroll ke elemen untuk memastikan terlihat
-                            driver.execute_script("arguments[0].scrollIntoView(true);", element)
-                            time.sleep(1.0)
-                            
-                            # Coba klik dengan JavaScript jika normal click gagal
-                            try:
-                                element.click()
-                                print(f"✅ Berhasil mengklik dengan normal click")
-                            except Exception as click_error:
-                                print(f"⚠️ Normal click gagal, mencoba JavaScript click: {str(click_error)}")
-                                driver.execute_script("arguments[0].click();", element)
-                                print(f"✅ Berhasil mengklik dengan JavaScript click")
-                            
-                            time.sleep(2.0)
-                            batalkan_clicked = True
-                            break
-                    except Exception as e:
-                        print(f"🔍 Debug Batalkan Error {j+1}: {str(e)}")
-                        continue
-                        
-                if batalkan_clicked:
-                    break
-                    
-            except Exception as e:
-                print(f"🔍 Debug: Error dengan selector '{selector}': {str(e)}")
-                continue
-        
-        if not batalkan_clicked:
-            print(f"❌ Tidak ditemukan tombol 'Batalkan'")
-            return False
-        
-        # Langkah 3: Cari dan klik "YA, BATALKAN TRANSAKSI"
-        print(f"🔍 Langkah 3: Mencari tombol 'YA, BATALKAN TRANSAKSI'...")
-        ya_batalkan_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'YA, BATALKAN TRANSAKSI')]")
-        
-        ya_batalkan_clicked = False
-        for i, element in enumerate(ya_batalkan_elements):
-            try:
-                element_text = element.text.strip()
-                print(f"🔍 Debug YA Batalkan {i+1}: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                element = driver.find_element(By.XPATH, "//*[contains(text(), 'Rincian')][1]")
+                text = element.text.strip()
+                print(f"🔍 Debug Rincian Fallback: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
                 
                 if element.is_displayed() and element.is_enabled():
-                    print(f"🖱️ Mengklik 'YA, BATALKAN TRANSAKSI'...")
-                    print(f"🔍 Debug YA Batalkan Success: XPath='//*[contains(text(), 'YA, BATALKAN TRANSAKSI')][{i+1}]'")
+                    print(f"🖱️ Mengklik 'Rincian' (fallback)...")
+                    print(f"🔍 Debug Rincian Fallback Success: XPath='//*[contains(text(), 'Rincian')][1]'")
                     element.click()
                     time.sleep(2.0)
-                    ya_batalkan_clicked = True
-                    break
-            except Exception as e:
-                print(f"🔍 Debug YA Batalkan Error {i+1}: {str(e)}")
-                continue
+                else:
+                    print(f"❌ Elemen Rincian fallback tidak dapat diklik")
+                    return False
+            except Exception as e2:
+                print(f"❌ Error dengan XPath fallback: {str(e2)}")
+                return False
         
-        if not ya_batalkan_clicked:
-            print(f"❌ Tidak ditemukan tombol 'YA, BATALKAN TRANSAKSI'")
-            return False
-        
-        # Langkah 4: Isi alasan pembatalan "Salah Inputan"
-        print(f"🔍 Langkah 4: Mengisi alasan pembatalan 'Salah Inputan'...")
-        alasan_elements = driver.find_elements(By.XPATH, "//input[@type='text'] | //textarea")
-        
-        alasan_filled = False
-        for i, element in enumerate(alasan_elements):
+        # === LANGKAH 2: Klik "BATALKAN" dengan direct class selector ===
+        print(f"🔍 Langkah 2: Mencari tombol 'Batalkan'...")
+        try:
+            # Direct class selector berdasarkan terminal output
+            element = driver.find_element(By.CLASS_NAME, "styles_btnCancel__iT8X5")
+            text = element.text.strip()
+            print(f"🔍 Debug Batalkan 1: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+            
+            if element.is_displayed() and element.is_enabled():
+                print(f"🖱️ Mengklik tombol 'BATALKAN'...")
+                print(f"🔍 Debug Batalkan Success: Class='styles_btnCancel__iT8X5'")
+                
+                # Scroll ke elemen untuk memastikan terlihat
+                driver.execute_script("arguments[0].scrollIntoView(true);", element)
+                time.sleep(1.0)
+                
+                # Coba klik dengan JavaScript jika normal click gagal
+                try:
+                    element.click()
+                    print(f"✅ Berhasil mengklik dengan normal click")
+                except Exception as click_error:
+                    print(f"⚠️ Normal click gagal, mencoba JavaScript click: {str(click_error)}")
+                    driver.execute_script("arguments[0].click();", element)
+                    print(f"✅ Berhasil mengklik dengan JavaScript click")
+                
+                time.sleep(2.0)
+            else:
+                print(f"❌ Elemen BATALKAN tidak dapat diklik")
+                return False
+        except Exception as e:
+            print(f"❌ Error dengan direct class selector: {str(e)}")
+            print("🔄 Mencoba dengan XPath fallback...")
+            
+            # Fallback: XPath text-based
             try:
+                elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Batalkan')]")
+                print(f"🔍 Debug: Selector '//*[contains(text(), 'Batalkan')]' menemukan {len(elements)} elemen")
+                
+                for i, element in enumerate(elements):
+                    text = element.text.strip()
+                    print(f"🔍 Debug Batalkan Fallback {i+1}: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                    
+                    # Cek apakah ini tombol "BATALKAN" yang benar
+                    if (text == "BATALKAN" and 
+                        element.is_displayed() and 
+                        element.is_enabled()):
+                        print(f"🖱️ Mengklik tombol 'BATALKAN' (fallback)...")
+                        print(f"🔍 Debug Batalkan Fallback Success: XPath='//*[contains(text(), 'Batalkan')][{i+1}]'")
+                        
+                        # Scroll ke elemen untuk memastikan terlihat
+                        driver.execute_script("arguments[0].scrollIntoView(true);", element)
+                        time.sleep(1.0)
+                        
+                        # Coba klik dengan JavaScript jika normal click gagal
+                        try:
+                            element.click()
+                            print(f"✅ Berhasil mengklik dengan normal click")
+                        except Exception as click_error:
+                            print(f"⚠️ Normal click gagal, mencoba JavaScript click: {str(click_error)}")
+                            driver.execute_script("arguments[0].click();", element)
+                            print(f"✅ Berhasil mengklik dengan JavaScript click")
+                        
+                        time.sleep(2.0)
+                        break
+                else:
+                    print(f"❌ Tidak ditemukan tombol 'BATALKAN' yang bisa diklik")
+                    return False
+            except Exception as e2:
+                print(f"❌ Error dengan XPath fallback: {str(e2)}")
+                return False
+        
+        # === LANGKAH 3: Klik "YA, BATALKAN TRANSAKSI" dengan direct class selector ===
+        print(f"🔍 Langkah 3: Mencari tombol 'YA, BATALKAN TRANSAKSI'...")
+        try:
+            # Direct class selector berdasarkan terminal output - filter dengan text validation
+            elements = driver.find_elements(By.CLASS_NAME, "styles_fullWidth__r6_1Z")
+            target_element = None
+            
+            for element in elements:
+                text = element.text.strip()
+                if "YA, BATALKAN TRANSAKSI" in text:
+                    target_element = element
+                    break
+            
+            if target_element:
+                text = target_element.text.strip()
+                print(f"🔍 Debug YA Batalkan 1: Text='{text}', Tag={target_element.tag_name}, Class={target_element.get_attribute('class')}, ID={target_element.get_attribute('id')}")
+                
+                if target_element.is_displayed() and target_element.is_enabled():
+                    print(f"🖱️ Mengklik 'YA, BATALKAN TRANSAKSI'...")
+                    print(f"🔍 Debug YA Batalkan Success: Class='styles_fullWidth__r6_1Z' (filtered)")
+                    target_element.click()
+                    time.sleep(2.0)
+                else:
+                    print(f"❌ Elemen YA BATALKAN tidak dapat diklik")
+                    return False
+            else:
+                print(f"❌ Tidak ditemukan elemen YA BATALKAN dengan class yang sesuai")
+                return False
+        except Exception as e:
+            print(f"❌ Error dengan direct class selector: {str(e)}")
+            print("🔄 Mencoba dengan XPath fallback...")
+            
+            # Fallback: XPath text-based
+            try:
+                element = driver.find_element(By.XPATH, "//*[contains(text(), 'YA, BATALKAN TRANSAKSI')][1]")
+                text = element.text.strip()
+                print(f"🔍 Debug YA Batalkan Fallback: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                
+                if element.is_displayed() and element.is_enabled():
+                    print(f"🖱️ Mengklik 'YA, BATALKAN TRANSAKSI' (fallback)...")
+                    print(f"🔍 Debug YA Batalkan Fallback Success: XPath='//*[contains(text(), 'YA, BATALKAN TRANSAKSI')][1]'")
+                    element.click()
+                    time.sleep(2.0)
+                else:
+                    print(f"❌ Elemen YA BATALKAN fallback tidak dapat diklik")
+                    return False
+            except Exception as e2:
+                print(f"❌ Error dengan XPath fallback: {str(e2)}")
+                return False
+        
+        # === LANGKAH 4: Isi alasan pembatalan dengan direct name selector ===
+        print(f"🔍 Langkah 4: Mengisi alasan pembatalan 'Salah Inputan'...")
+        try:
+            # Direct name selector berdasarkan terminal output
+            element = driver.find_element(By.NAME, "reason")
+            element_type = element.get_attribute('type')
+            element_placeholder = element.get_attribute('placeholder')
+            print(f"🔍 Debug Alasan 1: Type='{element_type}', Placeholder='{element_placeholder}', Name='reason', Tag={element.tag_name}, Class={element.get_attribute('class')}")
+            
+            if element.is_displayed() and element.is_enabled():
+                element.clear()
+                element.send_keys("Salah Inputan")
+                print(f"✅ Alasan pembatalan berhasil diisi: 'Salah Inputan'")
+                print(f"🔍 Debug Alasan Success: Name='reason'")
+            else:
+                print(f"❌ Elemen alasan tidak dapat diisi")
+                return False
+        except Exception as e:
+            print(f"❌ Error dengan direct name selector: {str(e)}")
+            print("🔄 Mencoba dengan XPath fallback...")
+            
+            # Fallback: XPath dengan type dan placeholder
+            try:
+                element = driver.find_element(By.XPATH, "(//input[@type='text'] | //textarea)[1]")
                 element_type = element.get_attribute('type')
                 element_placeholder = element.get_attribute('placeholder')
-                element_name = element.get_attribute('name')
-                print(f"🔍 Debug Alasan {i+1}: Type='{element_type}', Placeholder='{element_placeholder}', Name='{element_name}', Tag={element.tag_name}, Class={element.get_attribute('class')}")
+                print(f"🔍 Debug Alasan Fallback: Type='{element_type}', Placeholder='{element_placeholder}', Tag={element.tag_name}, Class={element.get_attribute('class')}")
                 
                 if element.is_displayed() and element.is_enabled():
                     element.clear()
                     element.send_keys("Salah Inputan")
-                    print(f"✅ Alasan pembatalan berhasil diisi: 'Salah Inputan'")
-                    print(f"🔍 Debug Alasan Success: XPath='(//input[@type='text'] | //textarea)[{i+1}]'")
-                    alasan_filled = True
-                    break
-            except Exception as e:
-                print(f"🔍 Debug Alasan Error {i+1}: {str(e)}")
-                continue
+                    print(f"✅ Alasan pembatalan berhasil diisi: 'Salah Inputan' (fallback)")
+                    print(f"🔍 Debug Alasan Fallback Success: XPath='(//input[@type='text'] | //textarea)[1]'")
+                else:
+                    print(f"❌ Elemen alasan fallback tidak dapat diisi")
+                    return False
+            except Exception as e2:
+                print(f"❌ Error dengan XPath fallback: {str(e2)}")
+                return False
         
-        if not alasan_filled:
-            print(f"❌ Tidak ditemukan field alasan pembatalan")
-            return False
-        
-        # Langkah 5: Isi PIN
+        # === LANGKAH 5: Isi PIN dengan direct XPath selector ===
         print(f"🔍 Langkah 5: Mengisi PIN: {pin}...")
-        pin_elements = driver.find_elements(By.XPATH, "//input[@type='password']")
-        
-        pin_filled = False
-        for i, element in enumerate(pin_elements):
+        try:
+            # Direct XPath selector berdasarkan terminal output
+            element = driver.find_element(By.XPATH, "//input[@type='password' and @placeholder='Masukkan PIN Anda']")
+            element_placeholder = element.get_attribute('placeholder')
+            element_name = element.get_attribute('name')
+            print(f"🔍 Debug PIN 1: Placeholder='{element_placeholder}', Name='{element_name}', Tag={element.tag_name}, Class={element.get_attribute('class')}")
+            
+            if element.is_displayed() and element.is_enabled():
+                element.clear()
+                element.send_keys(pin)
+                print(f"✅ PIN berhasil diisi: {pin}")
+                print(f"🔍 Debug PIN Success: XPath='//input[@type='password' and @placeholder='Masukkan PIN Anda']'")
+            else:
+                print(f"❌ Elemen PIN tidak dapat diisi")
+                return False
+        except Exception as e:
+            print(f"❌ Error dengan direct XPath selector: {str(e)}")
+            print("🔄 Mencoba dengan XPath fallback...")
+            
+            # Fallback: XPath dengan type password
             try:
+                element = driver.find_element(By.XPATH, "//input[@type='password'][1]")
                 element_placeholder = element.get_attribute('placeholder')
                 element_name = element.get_attribute('name')
-                print(f"🔍 Debug PIN {i+1}: Placeholder='{element_placeholder}', Name='{element_name}', Tag={element.tag_name}, Class={element.get_attribute('class')}")
+                print(f"🔍 Debug PIN Fallback: Placeholder='{element_placeholder}', Name='{element_name}', Tag={element.tag_name}, Class={element.get_attribute('class')}")
                 
                 if element.is_displayed() and element.is_enabled():
                     element.clear()
                     element.send_keys(pin)
-                    print(f"✅ PIN berhasil diisi: {pin}")
-                    print(f"🔍 Debug PIN Success: XPath='//input[@type='password'][{i+1}]'")
-                    pin_filled = True
-                    break
-            except Exception as e:
-                print(f"🔍 Debug PIN Error {i+1}: {str(e)}")
-                continue
+                    print(f"✅ PIN berhasil diisi: {pin} (fallback)")
+                    print(f"🔍 Debug PIN Fallback Success: XPath='//input[@type='password'][1]'")
+                else:
+                    print(f"❌ Elemen PIN fallback tidak dapat diisi")
+                    return False
+            except Exception as e2:
+                print(f"❌ Error dengan XPath fallback: {str(e2)}")
+                return False
         
-        if not pin_filled:
-            print(f"❌ Tidak ditemukan field PIN")
-            return False
-        
-        # Langkah 6: Klik "BATALKAN TRANSAKSI"
+        # === LANGKAH 6: Klik "BATALKAN TRANSAKSI" dengan direct class selector ===
         print(f"🔍 Langkah 6: Mencari tombol 'BATALKAN TRANSAKSI'...")
-        batalkan_transaksi_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'BATALKAN TRANSAKSI')]")
-        
-        batalkan_transaksi_clicked = False
-        for i, element in enumerate(batalkan_transaksi_elements):
+        try:
+            # Direct class selector berdasarkan terminal output - filter bukan fullWidth
+            elements = driver.find_elements(By.CLASS_NAME, "styles_primary__k_AUJ")
+            target_element = None
+            
+            for element in elements:
+                class_attr = element.get_attribute('class')
+                if "fullWidth" not in class_attr:
+                    target_element = element
+                    break
+            
+            if target_element:
+                text = target_element.text.strip()
+                print(f"🔍 Debug Batalkan Transaksi 1: Text='{text}', Tag={target_element.tag_name}, Class={target_element.get_attribute('class')}, ID={target_element.get_attribute('id')}")
+                
+                if target_element.is_displayed() and target_element.is_enabled():
+                    print(f"🖱️ Mengklik 'BATALKAN TRANSAKSI'...")
+                    print(f"🔍 Debug Batalkan Transaksi Success: Class='styles_primary__k_AUJ' (filtered)")
+                    target_element.click()
+                    time.sleep(3.0)
+                else:
+                    print(f"❌ Elemen BATALKAN TRANSAKSI tidak dapat diklik")
+                    return False
+            else:
+                print(f"❌ Tidak ditemukan elemen BATALKAN TRANSAKSI yang sesuai")
+                return False
+        except Exception as e:
+            print(f"❌ Error dengan direct class selector: {str(e)}")
+            print("🔄 Mencoba dengan XPath fallback...")
+            
+            # Fallback: XPath text-based
             try:
-                element_text = element.text.strip()
-                print(f"🔍 Debug Batalkan Transaksi {i+1}: Text='{element_text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                element = driver.find_element(By.XPATH, "//*[contains(text(), 'BATALKAN TRANSAKSI')][1]")
+                text = element.text.strip()
+                print(f"🔍 Debug Batalkan Transaksi Fallback: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
                 
                 if element.is_displayed() and element.is_enabled():
-                    print(f"🖱️ Mengklik 'BATALKAN TRANSAKSI'...")
-                    print(f"🔍 Debug Batalkan Transaksi Success: XPath='//*[contains(text(), 'BATALKAN TRANSAKSI')][{i+1}]'")
+                    print(f"🖱️ Mengklik 'BATALKAN TRANSAKSI' (fallback)...")
+                    print(f"🔍 Debug Batalkan Transaksi Fallback Success: XPath='//*[contains(text(), 'BATALKAN TRANSAKSI')][1]'")
                     element.click()
                     time.sleep(3.0)
-                    batalkan_transaksi_clicked = True
-                    break
-            except Exception as e:
-                print(f"🔍 Debug Batalkan Transaksi Error {i+1}: {str(e)}")
-                continue
-        
-        if not batalkan_transaksi_clicked:
-            print(f"❌ Tidak ditemukan tombol 'BATALKAN TRANSAKSI'")
-            return False
+                else:
+                    print(f"❌ Elemen BATALKAN TRANSAKSI fallback tidak dapat diklik")
+                    return False
+            except Exception as e2:
+                print(f"❌ Error dengan XPath fallback: {str(e2)}")
+                return False
         
         # Verifikasi apakah transaksi berhasil dibatalkan
         page_source = driver.page_source.lower()

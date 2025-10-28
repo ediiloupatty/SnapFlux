@@ -5,7 +5,6 @@ File ini berisi semua fungsi untuk navigasi di dalam aplikasi web
 import time
 from datetime import datetime
 from selenium.webdriver.common.by import By
-from .selectors import NavigationSelectors, DateSelectors
 from .constants import BULAN_ID, BULAN_SINGKAT
 
 def click_laporan_penjualan_direct(driver):
@@ -20,7 +19,7 @@ def click_laporan_penjualan_direct(driver):
             if text and 'laporan' in text.lower() and 'penjualan' in text.lower():
                 print(f"✅ Menu Laporan Penjualan ditemukan langsung!")
                 print(f"📝 Text: '{text}'")
-                print(f"🔍 Debug Laporan Penjualan 1: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                print(f"🔍 Debug Laporan Penjualan 1: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
                 if element.is_displayed() and element.is_enabled():
                     element.click()
                     print(f"🔍 Debug Laporan Penjualan Success: XPath='//*[contains(text(), 'Laporan Penjualan')]'")
@@ -43,8 +42,10 @@ def click_laporan_penjualan_direct(driver):
                 if text and 'laporan' in text.lower() and 'penjualan' in text.lower():
                     print(f"✅ Menu Laporan Penjualan ditemukan dengan class fallback!")
                     print(f"📝 Text: '{text}'")
+                    print(f"🔍 Debug Laporan Penjualan Fallback: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
                     if element.is_displayed() and element.is_enabled():
                         element.click()
+                        print(f"🔍 Debug Laporan Penjualan Fallback Success: XPath='//*[contains(text(), 'Laporan Penjualan')]'")
                         print(f"✅ Berhasil mengklik menu: '{text}'")
                         time.sleep(3)
                         print("✅ Navigasi ke Laporan Penjualan berhasil!")
@@ -66,7 +67,12 @@ def navigate_to_atur_produk(driver):
         time.sleep(1)
         print("🔍 Mencari menu 'Atur Produk' atau 'Atur Stok & Harga'...")
         
-        for selector in NavigationSelectors.ATUR_PRODUK:
+        atur_produk_selectors = [
+            "//*[(self::button or self::a or self::div or self::span) and contains(text(), 'Atur Produk')]",
+            "//*[(self::button or self::a or self::div or self::span) and contains(text(), 'Atur Stok')]",
+            "//*[contains(text(), 'Atur') and contains(text(), 'Harga')]"
+        ]
+        for selector in atur_produk_selectors:
             try:
                 elements = driver.find_elements(By.XPATH, selector)
                 if elements:
@@ -441,35 +447,53 @@ def click_date_elements_direct(driver, selected_date=None):
         return False
 
 def click_date_elements_rekap_penjualan(driver, selected_date=None):
-    """Klik elemen tanggal di halaman Rekap Penjualan"""
+    """Klik elemen tanggal di halaman Rekap Penjualan dengan flexible dynamic selector"""
     print("\n📅 === KLIK ELEMEN TANGGAL DI REKAP PENJUALAN ===")
     
     try:
         time.sleep(1.5)
         print("🚀 Mencari elemen filter tanggal di Rekap Penjualan...")
         
-        # Cari elemen "Atur Rentang Waktu" atau filter tanggal
+        # === STEP 1: Klik "Atur Rentang Waktu" dengan ID selector (STABIL) ===
+        print("\n📅 === STEP 1: KLIK 'ATUR RENTANG WAKTU' DENGAN ID SELECTOR ===")
         date_filter_found = False
         
-        # Coba berbagai teks yang mungkin muncul di Rekap Penjualan
-        filter_texts = ["Atur Rentang Waktu", "Pilih Tanggal", "Filter Tanggal", "Tanggal"]
-        
-        for filter_text in filter_texts:
+        try:
+            # Primary: ID selector (STABIL berdasarkan terminal output)
+            element = driver.find_element(By.ID, "mantine-rk-label")
+            text = element.text.strip()
+            if text and 'atur' in text.lower() and 'rentang' in text.lower():
+                print(f"✅ Elemen filter tanggal ditemukan dengan ID selector!")
+                print(f"📝 Text: '{text}'")
+                print(f"🔍 Debug Filter Tanggal: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
+                if element.is_displayed() and element.is_enabled():
+                    element.click()
+                    print(f"🔍 Debug Filter Tanggal Success: ID='mantine-rk-label'")
+                    date_filter_found = True
+                else:
+                    print("❌ Elemen tidak dapat diklik")
+            else:
+                print("❌ Elemen tidak mengandung 'Atur Rentang Waktu'")
+        except Exception as e:
+            print(f"⚠️ Error dengan ID selector: {str(e)}")
+            print("🔄 Mencoba dengan XPath fallback...")
+            
+            # Fallback: XPath text-based
             try:
-                elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{filter_text}')]")
-                if elements:
-                    for element in elements:
-                        text = element.text.strip()
-                        if text and any(keyword in text.lower() for keyword in ['rentang', 'waktu', 'tanggal', 'pilih']):
-                            if element.is_displayed() and element.is_enabled():
-                                print(f"✅ Elemen filter tanggal ditemukan: '{text}'")
-                                element.click()
-                                date_filter_found = True
-                                break
-                    if date_filter_found:
-                        break
-            except Exception:
-                continue
+                element = driver.find_element(By.XPATH, "//*[contains(text(), 'Atur Rentang Waktu')]")
+                text = element.text.strip()
+                if text and 'atur' in text.lower() and 'rentang' in text.lower():
+                    print(f"✅ Elemen filter tanggal ditemukan dengan XPath fallback!")
+                    print(f"📝 Text: '{text}'")
+                    print(f"🔍 Debug Filter Tanggal: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
+                    if element.is_displayed() and element.is_enabled():
+                        element.click()
+                        print(f"🔍 Debug Filter Tanggal Success: XPath='//*[contains(text(), 'Atur Rentang Waktu')]'")
+                        date_filter_found = True
+                    else:
+                        print("❌ Elemen tidak dapat diklik")
+            except Exception as e2:
+                print(f"❌ Error dengan XPath fallback: {str(e2)}")
         
         if not date_filter_found:
             print("⚠️ Elemen filter tanggal tidak ditemukan di Rekap Penjualan")
@@ -478,7 +502,10 @@ def click_date_elements_rekap_penjualan(driver, selected_date=None):
         
         time.sleep(1)
         
-        # Klik bulan tahun
+        # === STEP 2: Klik bulan tahun dengan flexible dynamic selector ===
+        print("\n📅 === STEP 2: KLIK BULAN TAHUN DENGAN FLEXIBLE DYNAMIC SELECTOR ===")
+        
+        # Tentukan bulan dan tahun berdasarkan input user
         if selected_date:
             bulan_name = BULAN_ID[selected_date.month]
             tahun = selected_date.year
@@ -491,23 +518,52 @@ def click_date_elements_rekap_penjualan(driver, selected_date=None):
         
         print(f"🎯 Mencari elemen bulan tahun: '{bulan_tahun_text}'")
         
-        # Klik bulan tahun
+        bulan_tahun_found = False
+        
+        # Tier 1: XPath dengan dynamic text (FAST)
         try:
             elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{bulan_tahun_text}')]")
             for element in elements:
                 text = element.text.strip()
                 if text and bulan_name.lower() in text.lower() and str(tahun) in text:
                     if element.is_displayed() and element.is_enabled():
+                        print(f"🔍 Debug Bulan Tahun: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
                         element.click()
+                        print(f"🔍 Debug Bulan Tahun Success: XPath='//*[contains(text(), '{bulan_tahun_text}')]'")
                         print(f"✅ Berhasil mengklik bulan tahun: '{text}'")
+                        bulan_tahun_found = True
                         break
         except Exception as e:
-            print(f"⚠️ Error mengklik bulan tahun: {str(e)}")
+            print(f"⚠️ Error dengan XPath dynamic: {str(e)}")
+        
+        # Tier 2: Class + validasi text (FALLBACK)
+        if not bulan_tahun_found:
+            print("🔄 Mencoba dengan class fallback...")
+            try:
+                elements = driver.find_elements(By.CLASS_NAME, "mantine-CalendarHeader-calendarHeaderLevel")
+                for element in elements:
+                    text = element.text.strip()
+                    if text and bulan_name.lower() in text.lower() and str(tahun) in text:
+                        if element.is_displayed() and element.is_enabled():
+                            print(f"✅ Elemen bulan tahun ditemukan dengan class fallback!")
+                            print(f"📝 Text: '{text}'")
+                            element.click()
+                            print(f"✅ Berhasil mengklik bulan tahun: '{text}'")
+                            bulan_tahun_found = True
+                            break
+            except Exception as e2:
+                print(f"❌ Error dengan class fallback: {str(e2)}")
+        
+        if not bulan_tahun_found:
+            print(f"❌ Elemen bulan tahun '{bulan_tahun_text}' tidak ditemukan")
             return False
         
         time.sleep(1)
         
-        # Klik bulan singkat
+        # === STEP 3: Klik bulan singkat dengan flexible dynamic selector ===
+        print("\n📅 === STEP 3: KLIK BULAN SINGKAT DENGAN FLEXIBLE DYNAMIC SELECTOR ===")
+        
+        # Tentukan bulan singkat berdasarkan input user
         if selected_date:
             bulan_singkat = BULAN_SINGKAT[selected_date.month]
         else:
@@ -516,22 +572,52 @@ def click_date_elements_rekap_penjualan(driver, selected_date=None):
         
         print(f"🎯 Mencari elemen bulan singkat: '{bulan_singkat}'")
         
+        bulan_singkat_found = False
+        
+        # Tier 1: XPath exact match (FAST)
         try:
             elements = driver.find_elements(By.XPATH, f"//*[text()='{bulan_singkat}']")
             for element in elements:
                 text = element.text.strip()
                 if text and text == bulan_singkat:
                     if element.is_displayed() and element.is_enabled():
+                        print(f"🔍 Debug Bulan Singkat: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
                         element.click()
+                        print(f"🔍 Debug Bulan Singkat Success: XPath='//*[text()='{bulan_singkat}']'")
                         print(f"✅ Berhasil mengklik bulan singkat: '{text}'")
+                        bulan_singkat_found = True
                         break
         except Exception as e:
-            print(f"⚠️ Error mengklik bulan singkat: {str(e)}")
+            print(f"⚠️ Error dengan XPath exact match: {str(e)}")
+        
+        # Tier 2: Class + validasi text (FALLBACK)
+        if not bulan_singkat_found:
+            print("🔄 Mencoba dengan class fallback...")
+            try:
+                elements = driver.find_elements(By.CLASS_NAME, "mantine-PickerControl-pickerControl")
+                for element in elements:
+                    text = element.text.strip()
+                    if text and text == bulan_singkat:
+                        if element.is_displayed() and element.is_enabled():
+                            print(f"✅ Elemen bulan singkat ditemukan dengan class fallback!")
+                            print(f"📝 Text: '{text}'")
+                            element.click()
+                            print(f"✅ Berhasil mengklik bulan singkat: '{text}'")
+                            bulan_singkat_found = True
+                            break
+            except Exception as e2:
+                print(f"❌ Error dengan class fallback: {str(e2)}")
+        
+        if not bulan_singkat_found:
+            print(f"❌ Elemen bulan singkat '{bulan_singkat}' tidak ditemukan")
             return False
         
         time.sleep(1)
         
-        # Klik tanggal spesifik
+        # === STEP 4: Klik tanggal spesifik dengan flexible dynamic selector ===
+        print("\n📅 === STEP 4: KLIK TANGGAL SPESIFIK DENGAN FLEXIBLE DYNAMIC SELECTOR ===")
+        
+        # Tentukan tanggal berdasarkan input user
         if selected_date:
             tanggal_hari = selected_date.day
         else:
@@ -540,20 +626,50 @@ def click_date_elements_rekap_penjualan(driver, selected_date=None):
         
         print(f"🎯 Mencari elemen tanggal: '{tanggal_hari}'")
         
+        tanggal_found = False
+        
+        # Tier 1: XPath exact match (FAST)
         try:
             elements = driver.find_elements(By.XPATH, f"//*[text()='{tanggal_hari}']")
             for element in elements:
                 text = element.text.strip()
                 if text and text == str(tanggal_hari):
                     if element.is_displayed() and element.is_enabled():
+                        print(f"🔍 Debug Tanggal: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
                         element.click()
+                        print(f"🔍 Debug Tanggal Success: XPath='//*[text()='{tanggal_hari}']'")
                         print(f"✅ Berhasil mengklik tanggal: '{text}'")
                         time.sleep(0.2)
                         element.click()  # Klik 2x
                         print(f"✅ Berhasil mengklik tanggal 2x: '{text}'")
+                        tanggal_found = True
                         break
         except Exception as e:
-            print(f"⚠️ Error mengklik tanggal: {str(e)}")
+            print(f"⚠️ Error dengan XPath exact match: {str(e)}")
+        
+        # Tier 2: Class + validasi text (FALLBACK)
+        if not tanggal_found:
+            print("🔄 Mencoba dengan class fallback...")
+            try:
+                elements = driver.find_elements(By.CLASS_NAME, "mantine-Day-day")
+                for element in elements:
+                    text = element.text.strip()
+                    if text and text == str(tanggal_hari):
+                        if element.is_displayed() and element.is_enabled():
+                            print(f"✅ Elemen tanggal ditemukan dengan class fallback!")
+                            print(f"📝 Text: '{text}'")
+                            element.click()
+                            print(f"✅ Berhasil mengklik tanggal: '{text}'")
+                            time.sleep(0.2)
+                            element.click()  # Klik 2x
+                            print(f"✅ Berhasil mengklik tanggal 2x: '{text}'")
+                            tanggal_found = True
+                            break
+            except Exception as e2:
+                print(f"❌ Error dengan class fallback: {str(e2)}")
+        
+        if not tanggal_found:
+            print(f"❌ Elemen tanggal '{tanggal_hari}' tidak ditemukan")
             return False
         
         time.sleep(1)
@@ -580,9 +696,11 @@ def click_rekap_penjualan_direct(driver):
             if text and 'rekap' in text.lower() and 'penjualan' in text.lower():
                 print(f"✅ Menu Rekap Penjualan ditemukan langsung!")
                 print(f"📝 Text: '{text}'")
+                print(f"🔍 Debug Rekap Penjualan: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
                 
                 if element.is_displayed() and element.is_enabled():
                     element.click()
+                    print(f"🔍 Debug Rekap Penjualan Success: XPath='//*[contains(text(), 'Rekap Penjualan')]'")
                     print(f"✅ Berhasil mengklik menu: '{text}'")
                     
                     time.sleep(3)
@@ -608,9 +726,11 @@ def click_rekap_penjualan_direct(driver):
                     if text and 'rekap' in text.lower() and 'penjualan' in text.lower():
                         print(f"✅ Menu Rekap Penjualan ditemukan dengan class fallback!")
                         print(f"📝 Text: '{text}'")
+                        print(f"🔍 Debug Rekap Penjualan Fallback: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
                         
                         if element.is_displayed() and element.is_enabled():
                             element.click()
+                            print(f"🔍 Debug Rekap Penjualan Fallback Success: XPath='//*[contains(text(), 'Rekap Penjualan')]'")
                             print(f"✅ Berhasil mengklik menu: '{text}'")
                             
                             time.sleep(3)

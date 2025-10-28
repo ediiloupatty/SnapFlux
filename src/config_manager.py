@@ -14,14 +14,10 @@ try:
 except ImportError:
     YAML_AVAILABLE = False
 
-try:
-    from .exceptions import ConfigurationError
-    EXCEPTIONS_AVAILABLE = True
-except ImportError:
-    EXCEPTIONS_AVAILABLE = False
-    class ConfigurationError(Exception):
-        """Fallback ConfigurationError jika exceptions module tidak tersedia"""
-        pass
+# Fallback ConfigurationError jika exceptions module tidak tersedia
+class ConfigurationError(Exception):
+    """Fallback ConfigurationError jika exceptions module tidak tersedia"""
+    pass
 
 logger = logging.getLogger('config_manager')
 

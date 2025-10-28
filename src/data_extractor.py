@@ -6,7 +6,6 @@ import time
 import re
 from datetime import datetime
 from selenium.webdriver.common.by import By
-from .selectors import DataExtractionSelectors
 
 def get_stock_value_direct(driver):
     """Ambil nilai stok langsung menggunakan lokasi yang sudah diketahui - SUPER CEPAT"""
@@ -78,7 +77,13 @@ def get_tabung_terjual_direct(driver):
             # Fallback: gunakan XPath yang lebih spesifik berdasarkan text pattern
             print("🔄 Mencoba dengan XPath fallback yang lebih efisien...")
             try:
-                for selector in DataExtractionSelectors.TABUNG_TERJUAL_FALLBACK:
+                fallback_selectors = [
+                    "//*[contains(text(), 'Tabung')]",
+                    "//div[contains(@class, 'text')]//*[contains(text(), 'tabung')]",
+                    "//span[contains(text(), 'tabung')]",
+                    "//p[contains(text(), 'tabung')]"
+                ]
+                for selector in fallback_selectors:
                     try:
                         elements = driver.find_elements(By.XPATH, selector)
                         for element in elements:
@@ -120,7 +125,12 @@ def get_customer_list_direct(driver):
         
         try:
             elements = None
-            for selector_type, selector_value in DataExtractionSelectors.CUSTOMER_LIST:
+            customer_selectors = [
+                (By.CLASS_NAME, "styles_listTransactionRoot__pvz4r"),
+                (By.CLASS_NAME, "mantine-1uguyhf"),
+                (By.XPATH, "//div[@class='styles_listTransactionRoot__pvz4r mantine-1uguyhf']")
+            ]
+            for selector_type, selector_value in customer_selectors:
                 try:
                     if selector_type == By.CLASS_NAME:
                         elements = driver.find_elements(selector_type, selector_value)

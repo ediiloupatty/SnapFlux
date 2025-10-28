@@ -9,7 +9,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 
-from .constants import RESULTS_DIR, BULAN_ID, DAY_COLORS, get_excel_filename_dynamic, get_sheet_name_dynamic, get_master_filename
+from .constants import RESULTS_DIR, BULAN_ID, get_sheet_name_dynamic, get_master_filename
 from .validators import parse_stok_to_int, parse_inputan_to_int
 
 def get_excel_filename(selected_date=None):
@@ -29,7 +29,8 @@ def get_day_color(date_str):
         # Parse tanggal dari format YYYY-MM-DD
         date_obj = datetime.strptime(date_str, "%Y-%m-%d")
         weekday = date_obj.weekday()  # 0=Monday, 1=Tuesday, ..., 6=Sunday
-        return DAY_COLORS.get(weekday, "FFFFFF")  # Default putih jika tidak ditemukan
+        # Default warna putih untuk semua hari
+        return "FFFFFF"
     except:
         return "FFFFFF"  # Putih jika error parsing tanggal
 

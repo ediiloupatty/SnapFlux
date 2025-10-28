@@ -65,22 +65,6 @@ IMPLICIT_WAIT = 5
 # Jika tidak, tetap menggunakan hardcoded values di atas (backward compatibility)
 
 # ========== FUNGSI GENERATE EXCEL DYNAMIC ==========
-def get_excel_filename_dynamic(selected_date=None):
-    """
-    Generate nama file Excel dengan format: Data_Transaksi_Pangkalan_SnapFlux_tahun-bulan-tanggal.xlsx
-    DEPRECATED - Gunakan get_master_filename() untuk sistem incremental
-    """
-    if selected_date:
-        year = selected_date.year
-        month = selected_date.month
-        day = selected_date.day
-    else:
-        now = datetime.now()
-        year = now.year
-        month = now.month
-        day = now.day
-    
-    return f"Data_Transaksi_Pangkalan_SnapFlux_{year}-{month:02d}-{day:02d}.xlsx"
 
 def get_master_filename(selected_date=None):
     """
@@ -112,17 +96,3 @@ def get_sheet_name_dynamic(selected_date=None):
     
     return f"{BULAN_ID[month].upper()}_{year}"
 
-# ========== KONFIGURASI EXCEL (DEPRECATED - gunakan fungsi dynamic di atas) ==========
-EXCEL_FILENAME_PIVOT = "DATA_TRANSAKSI_SNAPFLUX_HISTORIS_PIVOT.xlsx"
-SHEET_NAME_PIVOT = "Pivot View"
-
-# ========== KONFIGURASI WARNI HARI ==========
-DAY_COLORS = {
-    0: "FFE6B3",  # Senin - Jingga muda
-    1: "FFFFB3",  # Selasa - Kuning muda  
-    2: "FFB3B3",  # Rabu - Merah muda
-    3: "B3FFB3",  # Kamis - Hijau muda
-    4: "B3E6FF",  # Jumat - Biru muda
-    5: "E6B3FF",  # Sabtu - Ungu muda
-    6: "FFCCFF"   # Minggu - Pink muda
-}
