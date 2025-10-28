@@ -503,11 +503,16 @@ def get_customer_list_direct(driver, pin):
                         'Jenis Pelanggan' in next_text2 and
                         'Tabung LPG' in next_text3):
                         
+                        # Debug validation messages
+                        print(f"🔍 Debug: Validating - NIK: {next_text1}, Jenis: {next_text2}, Tabung: {next_text3}")
+                        
                         # Extract jumlah tabung dari next_text3
                         # Contoh: "1 Tabung LPG 3Kg", "3 Tabung LPG 3Kg", "2 Tabung LPG 3Kg"
                         import re
                         tabung_match = re.search(r'(\d+)\s+Tabung LPG', next_text3)
                         jumlah_tabung = tabung_match.group(1) if tabung_match else "?"
+                        
+                        print(f"🔍 Debug: Extracted tabung - Raw: '{next_text3}', Match: {jumlah_tabung}, Jumlah: {jumlah_tabung}")
                         
                         # Format data pembeli dengan informasi jumlah tabung
                         customer_info = f"{current_text} ({next_text1}) - {jumlah_tabung} Tabung"
@@ -687,7 +692,7 @@ def get_customer_list_direct(driver, pin):
                                                         print(f"   📋 AKSI: BATALKAN SEMUA (Salah Inputan - seharusnya 1 tabung)")
                                                         
                                                         # Batalkan transaksi tunggal yang salah inputan
-                                                        cancel_result = click_rumah_tangga_transaction(driver, pin)
+                                                        cancel_result, cancelled_position = click_rumah_tangga_transaction(driver, pin)
                                                         if cancel_result:
                                                             print(f"   ✅ Berhasil membatalkan transaksi salah inputan untuk {customer['name']}")
                                                             # Kembali ke halaman Rekap Penjualan
@@ -716,8 +721,91 @@ def get_customer_list_direct(driver, pin):
                                                         print(f"   🔍 SKENARIO 2: {jumlah_tabung} Tabung - {jumlah_transaksi} Inputan")
                                                         print(f"   📋 AKSI: BATALKAN SALAH SATU (Duplikasi Inputan)")
                                                         
-                                                        # Batalkan salah satu transaksi (yang pertama)
-                                                        cancel_result = click_rumah_tangga_transaction(driver, pin)
+                                                        # Implementasi multiple cancellations dalam detail page
+                                                        cancelled_positions = set()
+                                                        cancellation_count = 0
+                                                        max_cancellations = 10
+                                                        
+                                                        print(f"   🔄 Memulai proses multiple cancellations untuk {customer['name']}...")
+                                                        
+                                                        while cancellation_count < max_cancellations:
+                                                            print(f"   🔄 Cancellation attempt {cancellation_count + 1}...")
+                                                            
+                                                            # Batalkan salah satu transaksi dengan tracking posisi
+                                                            cancel_result, cancelled_position = click_rumah_tangga_transaction(driver, pin, cancelled_positions)
+                                                            
+                                                            if cancel_result:
+                                                                cancelled_positions.add(cancelled_position)
+                                                                cancellation_count += 1
+                                                                print(f"   ✅ Berhasil membatalkan transaksi ke-{cancellation_count} untuk {customer['name']}")
+                                                                
+                                                                # Cek berapa transaksi aktif yang tersisa di halaman detail saat ini
+                                                                try:
+                                                                    # Tunggu sebentar untuk memastikan DOM sudah stabil setelah pembatalan
+                                                                    time.sleep(3.0)
+                                                                    
+                                                                    # Refresh elemen untuk menghindari stale element reference
+                                                                    print(f"   🔄 Refresh elemen setelah pembatalan untuk menghitung transaksi aktif...")
+                                                                    
+                                                                    # Ambil semua text dari halaman detail saat ini dengan fresh elements
+                                                                    all_texts_detail = driver.find_elements(By.XPATH, "//*[text()]")
+                                                                    all_texts_detail = [elem.text for elem in all_texts_detail if elem.text.strip()]
+                                                                    
+                                                                    # Hitung transaksi Rumah Tangga yang masih aktif
+                                                                    rumah_tangga_count = count_active_rumah_tangga_transactions(all_texts_detail)
+                                                                    print(f"   📊 Transaksi aktif tersisa: {rumah_tangga_count}")
+                                                                    
+                                                                    if rumah_tangga_count <= 1:
+                                                                        print(f"   ✅ Semua pembatalan selesai untuk {customer['name']} - kembali ke Rekap Penjualan")
+                                                                        # Kembali ke halaman Rekap Penjualan
+                                                                        driver.back()
+                                                                        time.sleep(2.0)
+                                                                        driver.back()
+                                                                        time.sleep(2.0)
+                                                                        # Mark as processed
+                                                                        processed_customers.append(customer['key'])
+                                                                        # Break inner loop to recheck page
+                                                                        break
+                                                                    else:
+                                                                        print(f"   🔄 Masih ada {rumah_tangga_count} transaksi aktif - lanjutkan pembatalan")
+                                                                        continue
+                                                                        
+                                                                except Exception as count_e:
+                                                                    print(f"   ⚠️ Error saat menghitung transaksi aktif: {str(count_e)}")
+                                                                    print(f"   🔄 Menggunakan strategi alternatif - anggap masih ada transaksi untuk dibatalkan")
+                                                                    # Jika error, lanjutkan dengan asumsi masih ada transaksi untuk dibatalkan
+                                                                    # Hanya berhenti jika sudah mencapai max_cancellations
+                                                                    if cancellation_count >= max_cancellations - 1:
+                                                                        print(f"   ⚠️ Mencapai batas maksimal cancellations - kembali ke Rekap Penjualan")
+                                                                        driver.back()
+                                                                        time.sleep(2.0)
+                                                                        driver.back()
+                                                                        time.sleep(2.0)
+                                                                        processed_customers.append(customer['key'])
+                                                                        break
+                                                                    else:
+                                                                        print(f"   🔄 Lanjutkan pembatalan berikutnya...")
+                                                                        continue
+                                                            else:
+                                                                print(f"   ❌ Gagal membatalkan transaksi ke-{cancellation_count + 1} untuk {customer['name']}")
+                                                                # Jika gagal, kembali ke Rekap Penjualan
+                                                                driver.back()
+                                                                time.sleep(2.0)
+                                                                driver.back()
+                                                                time.sleep(2.0)
+                                                                break
+                                                        
+                                                        # Jika loop selesai tanpa break, berarti sudah mencapai max_cancellations
+                                                        if cancellation_count >= max_cancellations:
+                                                            print(f"   ⚠️ Mencapai batas maksimal cancellations ({max_cancellations}) untuk {customer['name']}")
+                                                            driver.back()
+                                                            time.sleep(2.0)
+                                                            driver.back()
+                                                            time.sleep(2.0)
+                                                            processed_customers.append(customer['key'])
+                                                        
+                                                        # Break inner loop to recheck page
+                                                        break
                                                         if cancel_result:
                                                             print(f"   ✅ Berhasil membatalkan salah satu transaksi duplikasi untuk {customer['name']}")
                                                             # Kembali ke halaman Rekap Penjualan
@@ -782,20 +870,34 @@ def get_customer_list_direct(driver, pin):
         return None
 
 
-def click_rumah_tangga_transaction(driver, pin):
+def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
     """
-    Mengklik transaksi Rumah Tangga dengan optimasi langsung ke element ke-2
-    Berdasarkan terminal output: Element ke-2 SELALU BERHASIL!
+    ============================================
+    FUNGSI KLIK TRANSAKSI RUMAH TANGGA DENGAN SKIP TRANSAKSI DIBATALKAN
+    ============================================
+    
+    Fungsi ini mengklik transaksi Rumah Tangga dengan strategi skip transaksi yang sudah dibatalkan
+    dan selalu memilih transaksi dari posisi paling bawah (yang belum dibatalkan).
+    
+    Proses yang dilakukan:
+    1. Ambil semua elemen "Rumah Tangga" dari halaman
+    2. Filter elemen yang TIDAK memiliki "Transaksi Dibatalkan" di parent container
+    3. Skip transaksi yang posisinya sudah pernah dibatalkan
+    4. Pilih transaksi dari posisi paling bawah (index terakhir)
+    5. Jika gagal, coba transaksi kedua dari bawah, ketiga dari bawah, dst
+    6. Klik parent element untuk masuk ke detail transaksi
+    7. Lakukan pembatalan transaksi
     
     Args:
         driver: WebDriver object yang sudah berada di halaman detail pelanggan
         pin: PIN dari akun yang sedang login
+        cancelled_positions: Set berisi posisi elemen yang sudah dibatalkan
         
     Returns:
-        bool: True jika berhasil klik transaksi dan batalkan, False jika gagal
+        tuple: (bool, int) - (True jika berhasil, posisi elemen jika berhasil)
     """
     try:
-        print(f"🖱️ Mencari dan mengklik transaksi Rumah Tangga...")
+        print(f"🖱️ Mencari dan mengklik transaksi Rumah Tangga (skip yang sudah dibatalkan)...")
         
         # Tunggu halaman load
         time.sleep(2.0)
@@ -804,77 +906,267 @@ def click_rumah_tangga_transaction(driver, pin):
         current_url = driver.current_url
         print(f"🔍 Debug: URL saat ini: {current_url}")
         
-        # OPTIMASI: Langsung ambil element ke-2 yang selalu berhasil berdasarkan terminal output
-        print(f"🔍 Debug: Metode Optimasi - Langsung ambil element ke-2...")
+        # Ambil semua elemen "Rumah Tangga" dengan direct selector
+        print(f"🔍 Debug: Mencari semua elemen 'Rumah Tangga'...")
         rumah_tangga_elements = driver.find_elements(By.XPATH, "//*[text()='Rumah Tangga']")
         print(f"🔍 Debug: Ditemukan {len(rumah_tangga_elements)} elemen 'Rumah Tangga'")
         
-        # Berdasarkan terminal output: Element ke-2 (index 1) SELALU BERHASIL!
-        if len(rumah_tangga_elements) >= 2:
+        if not rumah_tangga_elements:
+            print(f"❌ Tidak ditemukan elemen 'Rumah Tangga'")
+            return False, None
+        
+        # Initialize cancelled_positions if None
+        if cancelled_positions is None:
+            cancelled_positions = set()
+        
+        # Filter: Skip elemen yang memiliki "Transaksi Dibatalkan" di parent/sibling
+        active_transactions = []
+        cancelled_count = 0
+        
+        for i, element in enumerate(rumah_tangga_elements):
             try:
-                target_element = rumah_tangga_elements[1]  # Element ke-2 (index 1)
-                print(f"🔍 Debug Rumah Tangga Optimasi: Text='Rumah Tangga', Tag={target_element.tag_name}, Class={target_element.get_attribute('class')}, ID={target_element.get_attribute('id')}, Location={target_element.location}, Size={target_element.size}")
+                # Debug posisi detail untuk setiap elemen
+                element_location = element.location
+                element_size = element.size
+                element_class = element.get_attribute('class')
+                element_id = element.get_attribute('id')
                 
-                # Klik parent element dari element ke-2
-                parent = target_element.find_element(By.XPATH, "..")
+                print(f"🔍 Debug Posisi Detail {i+1}: Location={element_location}, Size={element_size}, Class={element_class}, ID={element_id}")
+                
+                # Cek parent container untuk text "Transaksi Dibatalkan" dengan berbagai variasi
+                parent = element.find_element(By.XPATH, "../..")
+                parent_text = parent.text
+                
+                # Debug parent text untuk analisis
+                print(f"🔍 Debug Parent Text {i+1}: '{parent_text[:100]}...' (truncated)")
+                
+                # Cek berbagai variasi text pembatalan
+                cancelled_keywords = [
+                    "Transaksi Dibatalkan",
+                    "TRANSAKSI DIBATALKAN", 
+                    "Dibatalkan",
+                    "DIBATALKAN",
+                    "Salah Inputan",
+                    "SALAH INPUTAN"
+                ]
+                
+                is_cancelled = any(keyword in parent_text for keyword in cancelled_keywords)
+                
+                if is_cancelled:
+                    cancelled_count += 1
+                    print(f"🔍 Debug: Transaksi {i+1} sudah dibatalkan - SKIP (detected keyword)")
+                elif cancelled_positions and i in cancelled_positions:
+                    cancelled_count += 1
+                    print(f"🔍 Debug: Transaksi {i+1} sudah dibatalkan sebelumnya (posisi {i}) - SKIP")
+                else:
+                    # Simpan elemen aktif tanpa perlu klik untuk mendapatkan URL
+                    active_transactions.append({
+                        'element': element,
+                        'index': i,
+                        'parent': parent,
+                        'location': element_location,
+                        'size': element_size
+                    })
+                    print(f"🔍 Debug: Transaksi {i+1} aktif - TERSEDIA (Location: {element_location})")
+                        
+            except Exception as e:
+                print(f"🔍 Debug: Error cek transaksi {i+1}: {str(e)}")
+                # Jika error, anggap sebagai transaksi aktif
+                active_transactions.append({
+                    'element': element,
+                    'index': i,
+                    'parent': None,
+                    'location': None,
+                    'size': None
+                })
+        
+        print(f"📊 Summary: {len(rumah_tangga_elements)} total, {cancelled_count} dibatalkan, {len(active_transactions)} aktif")
+        
+        if not active_transactions:
+            print(f"❌ Tidak ada transaksi aktif yang bisa diproses")
+            return False, None
+        
+        # Ambil transaksi dari posisi paling bawah (terakhir) dan coba fallback jika gagal
+        for attempt in range(len(active_transactions)):
+            try:
+                # Mulai dari paling bawah (index terakhir)
+                target_index = len(active_transactions) - 1 - attempt
+                target_transaction = active_transactions[target_index]
+                target_element = target_transaction['element']
+                
+                print(f"🎯 Mencoba transaksi dari posisi {target_index + 1} dari bawah (index {target_transaction['index'] + 1})...")
+                
+                # Debug posisi detail untuk transaksi yang akan diklik
+                target_location = target_transaction.get('location', target_element.location)
+                target_size = target_transaction.get('size', target_element.size)
+                print(f"🔍 Debug Target Position: Index={target_transaction['index']}, Location={target_location}, Size={target_size}")
+                
+                # Validasi elemen
+                if not target_element.is_displayed() or not target_element.is_enabled():
+                    print(f"⚠️ Transaksi {target_index + 1} tidak dapat diklik - coba berikutnya")
+                    continue
+                
+                # Klik parent element untuk masuk ke detail transaksi
+                if target_transaction['parent']:
+                    parent = target_transaction['parent']
+                else:
+                    parent = target_element.find_element(By.XPATH, "..")
+                
                 if parent.is_displayed() and parent.is_enabled():
-                    print(f"🖱️ Mengklik parent element dari Rumah Tangga (element ke-2)...")
-                    print(f"🔍 Debug Rumah Tangga Optimasi Success: XPath='//*[text()='Rumah Tangga'][2]/..'")
+                    print(f"🖱️ Mengklik transaksi dari posisi paling bawah (attempt {attempt + 1})...")
+                    print(f"🔍 Debug Rumah Tangga Bottom-Up: Text='Rumah Tangga', Tag={target_element.tag_name}, Class={target_element.get_attribute('class')}, ID={target_element.get_attribute('id')}, Location={target_location}, Size={target_size}")
+                    print(f"🔍 Debug Parent Element: Tag={parent.tag_name}, Class={parent.get_attribute('class')}, Location={parent.location}, Size={parent.size}")
+                    
+                    # Simpan URL sebelum klik untuk perbandingan
+                    url_before = driver.current_url
+                    print(f"🔍 Debug: URL sebelum klik: {url_before}")
+                    
                     parent.click()
                     time.sleep(3.0)
                     
-                    # Verifikasi navigasi dan lakukan pembatalan
-                    if verify_transaction_detail_page(driver):
-                        # Lakukan pembatalan transaksi
-                        cancel_result = cancel_transaction(driver, pin)
-                        return cancel_result
-                    else:
-                        print(f"⚠️ Tidak berhasil masuk ke halaman detail transaksi dengan element ke-2")
-                else:
-                    print(f"❌ Parent element ke-2 tidak dapat diklik")
-            except Exception as e:
-                print(f"🔍 Debug: Error dengan element ke-2: {str(e)}")
-        else:
-            print(f"❌ Tidak ditemukan minimal 2 elemen 'Rumah Tangga'")
-        
-        # FALLBACK: Jika element ke-2 gagal, coba element ke-1
-        print(f"🔄 Fallback: Mencoba element ke-1...")
-        if len(rumah_tangga_elements) >= 1:
-            try:
-                target_element = rumah_tangga_elements[0]  # Element ke-1 (index 0)
-                print(f"🔍 Debug Rumah Tangga Fallback: Text='Rumah Tangga', Tag={target_element.tag_name}, Class={target_element.get_attribute('class')}, ID={target_element.get_attribute('id')}, Location={target_element.location}, Size={target_element.size}")
-                
-                # Klik parent element dari element ke-1
-                parent = target_element.find_element(By.XPATH, "..")
-                if parent.is_displayed() and parent.is_enabled():
-                    print(f"🖱️ Mengklik parent element dari Rumah Tangga (element ke-1 fallback)...")
-                    print(f"🔍 Debug Rumah Tangga Fallback Success: XPath='//*[text()='Rumah Tangga'][1]/..'")
-                    parent.click()
-                    time.sleep(3.0)
+                    # Cek apakah URL berubah setelah klik
+                    url_after = driver.current_url
+                    print(f"🔍 Debug: URL setelah klik: {url_after}")
+                    
+                    # Jika URL tidak berubah atau tidak mengandung transactionId, coba klik elemen yang lebih spesifik
+                    if url_after == url_before or 'transactionId=' not in url_after:
+                        print(f"⚠️ URL tidak berubah atau tidak ada transactionId - coba klik elemen yang lebih spesifik...")
+                        
+                        # Coba klik elemen Rumah Tangga langsung
+                        try:
+                            target_element.click()
+                            time.sleep(3.0)
+                            url_after_retry = driver.current_url
+                            print(f"🔍 Debug: URL setelah retry klik elemen langsung: {url_after_retry}")
+                            
+                            if url_after_retry != url_after and 'transactionId=' in url_after_retry:
+                                print(f"✅ Retry berhasil - URL berubah dengan transactionId")
+                                url_after = url_after_retry
+                            else:
+                                print(f"⚠️ Retry juga gagal - URL masih tidak berubah")
+                        except Exception as retry_e:
+                            print(f"⚠️ Error saat retry klik elemen langsung: {str(retry_e)}")
                     
                     # Verifikasi navigasi dan lakukan pembatalan
                     if verify_transaction_detail_page(driver):
+                        print(f"✅ Berhasil masuk ke detail transaksi dari posisi paling bawah")
+                        
+                        # Cek apakah transaksi ini sudah dibatalkan dengan melihat page source
+                        page_source = driver.page_source.lower()
+                        cancelled_keywords = [
+                            "transaksi dibatalkan",
+                            "dibatalkan", 
+                            "salah inputan",
+                            "transaction cancelled"
+                        ]
+                        
+                        is_already_cancelled = any(keyword in page_source for keyword in cancelled_keywords)
+                        
+                        if is_already_cancelled:
+                            print(f"⚠️ Transaksi ini sudah dibatalkan sebelumnya - SKIP")
+                            # Kembali ke halaman sebelumnya
+                            driver.back()
+                            time.sleep(2.0)
+                            # Mark posisi ini sebagai dibatalkan
+                            cancelled_positions.add(target_transaction['index'])
+                            # Refresh elemen karena DOM sudah berubah
+                            print(f"🔄 Refresh elemen setelah skip transaksi dibatalkan...")
+                            return click_rumah_tangga_transaction(driver, pin, cancelled_positions)
+                        
+                        # Ambil transaction ID dari URL saat ini
+                        current_url = driver.current_url
+                        import re
+                        transaction_id_match = re.search(r'transactionId=([^&]+)', current_url)
+                        transaction_id = transaction_id_match.group(1) if transaction_id_match else None
+                        
                         # Lakukan pembatalan transaksi
                         cancel_result = cancel_transaction(driver, pin)
-                        return cancel_result
+                        if cancel_result:
+                            # Return posisi elemen jika berhasil
+                            return True, target_transaction['index']
+                        else:
+                            return False, None
                     else:
-                        print(f"⚠️ Tidak berhasil masuk ke halaman detail transaksi dengan element ke-1")
+                        print(f"⚠️ Tidak berhasil masuk ke halaman detail transaksi dari posisi {target_index + 1}")
+                        # Kembali ke halaman sebelumnya untuk coba transaksi lain
+                        try:
+                            driver.back()
+                            time.sleep(2.0)
+                            
+                            # Verifikasi bahwa kita kembali ke halaman yang benar
+                            current_url = driver.current_url
+                            if 'rekap' not in current_url.lower() and 'saleRecap' not in current_url.lower():
+                                print(f"⚠️ Tidak kembali ke halaman Rekap Penjualan - coba navigasi eksplisit...")
+                                # Coba navigasi eksplisit ke Rekap Penjualan
+                                if not click_rekap_penjualan_direct(driver):
+                                    print(f"❌ Gagal navigasi ke Rekap Penjualan - mungkin perlu refresh halaman")
+                                    # Jika gagal, refresh halaman dan coba lagi
+                                    driver.refresh()
+                                    time.sleep(3.0)
+                                    click_rekap_penjualan_direct(driver)
+                        except Exception as nav_e:
+                            print(f"⚠️ Error saat navigasi kembali: {str(nav_e)}")
+                            # Jika error, refresh halaman
+                            try:
+                                driver.refresh()
+                                time.sleep(3.0)
+                                click_rekap_penjualan_direct(driver)
+                            except Exception as refresh_e:
+                                print(f"❌ Error saat refresh halaman: {str(refresh_e)}")
+                        
+                        continue
                 else:
-                    print(f"❌ Parent element ke-1 tidak dapat diklik")
+                    print(f"❌ Parent element tidak dapat diklik untuk posisi {target_index + 1}")
+                    continue
+                    
             except Exception as e:
-                print(f"🔍 Debug: Error dengan element ke-1: {str(e)}")
+                print(f"🔍 Debug: Error dengan transaksi posisi {target_index + 1}: {str(e)}")
+                if "stale element reference" in str(e).lower():
+                    print(f"🔄 Stale element detected - refresh elemen dan coba lagi...")
+                    return click_rumah_tangga_transaction(driver, pin, cancelled_positions)
+                continue
         
-        print(f"❌ Semua metode optimasi gagal menemukan transaksi Rumah Tangga yang bisa diklik")
-        return False
+        print(f"❌ Semua transaksi aktif gagal diklik")
+        return False, None
         
     except Exception as e:
         print(f"❌ Error mengklik transaksi Rumah Tangga: {str(e)}")
-        return False
+        return False, None
+
+
+def count_active_rumah_tangga_transactions(all_texts):
+    """
+    Menghitung jumlah transaksi Rumah Tangga yang masih aktif (belum dibatalkan)
+    
+    Args:
+        all_texts: List berisi semua text dari halaman
+        
+    Returns:
+        int: Jumlah transaksi Rumah Tangga yang aktif
+    """
+    rumah_tangga_count = 0
+    try:
+        for i, text in enumerate(all_texts):
+            if text == "Rumah Tangga":
+                is_cancelled = False
+                # Cek dalam range 5 elemen sebelum dan sesudah untuk keyword pembatalan
+                for j in range(max(0, i-5), min(len(all_texts), i+5)):
+                    if "Transaksi Dibatalkan" in all_texts[j] or "Dibatalkan" in all_texts[j]:
+                        is_cancelled = True
+                        break
+                if not is_cancelled:
+                    rumah_tangga_count += 1
+    except Exception as e:
+        print(f"   ⚠️ Error dalam count_active_rumah_tangga_transactions: {str(e)}")
+        # Jika error, return 0 untuk safety
+        rumah_tangga_count = 0
+    
+    return rumah_tangga_count
 
 
 def verify_transaction_detail_page(driver):
     """
-    Verifikasi apakah sudah masuk ke halaman detail transaksi
+    Verifikasi apakah sudah masuk ke halaman detail transaksi dengan prioritas URL-based check
     
     Args:
         driver: WebDriver object
@@ -883,31 +1175,59 @@ def verify_transaction_detail_page(driver):
         bool: True jika sudah di halaman detail transaksi, False jika belum
     """
     try:
-        # Tunggu halaman load
+        # Tunggu sebentar untuk memastikan halaman sudah load
         time.sleep(2.0)
         
-        # Cek URL dan page source
+        # Ambil URL dan page source saat ini
         current_url = driver.current_url
         page_source = driver.page_source.lower()
         
-        print(f"🔍 Debug: URL setelah klik: {current_url}")
-        print(f"🔍 Debug: Page source contains 'informasi transaksi': {'informasi transaksi' in page_source}")
-        print(f"🔍 Debug: Page source contains 'rincian': {'rincian' in page_source}")
-        print(f"🔍 Debug: Page source contains 'pembayaran': {'pembayaran' in page_source}")
-        print(f"🔍 Debug: Page source contains 'total pembayaran': {'total pembayaran' in page_source}")
+        print(f"🔍 Debug: Verifikasi halaman detail transaksi...")
+        print(f"🔍 Debug: URL saat ini: {current_url}")
+        
+        # Cek apakah URL mengandung transactionId sebagai indikator utama
+        has_transaction_id = 'transactionid=' in current_url.lower()
+        print(f"🔍 Debug: URL contains 'transactionId': {has_transaction_id}")
         
         # Verifikasi berdasarkan berbagai indikator
-        if ("informasi transaksi" in page_source or 
-            "rincian" in page_source or
-            "pembayaran" in page_source or
-            "total pembayaran" in page_source or
-            "item pembelian" in page_source):
+        page_indicators = [
+            "informasi transaksi",
+            "rincian", 
+            "pembayaran",
+            "total pembayaran",
+            "item pembelian",
+            "detail transaksi",
+            "transaction detail",
+            "status transaksi"
+        ]
+        
+        found_indicators = [indicator for indicator in page_indicators if indicator in page_source]
+        print(f"🔍 Debug: Page source contains 'informasi transaksi': {'informasi transaksi' in page_source}")
+        print(f"🔍 Debug: Page source contains 'rincian': {'rincian' in page_source}")
+        print(f"🔍 Debug: Found page indicators: {found_indicators}")
+        
+        # Jika URL mengandung transactionId, anggap sudah di halaman yang benar
+        if has_transaction_id:
+            print(f"✅ Berhasil masuk ke halaman detail transaksi (berdasarkan URL dengan transactionId)!")
+            return True
+        
+        # Jika ada minimal 2 indikator halaman detail transaksi
+        if len(found_indicators) >= 2:
             print(f"✅ Berhasil masuk ke halaman detail transaksi!")
             return True
-        else:
-            print(f"⚠️ Tidak berhasil masuk ke halaman detail transaksi")
-            return False
-            
+        
+        # Jika hanya ada 1 indikator, cek lebih detail
+        if len(found_indicators) == 1:
+            print(f"⚠️ Hanya ditemukan 1 indikator: {found_indicators[0]}")
+            # Cek apakah ada elemen yang menunjukkan ini bukan halaman utama
+            if "rekap" not in current_url.lower() and "saleRecap" not in current_url.lower():
+                print(f"✅ Berhasil masuk ke halaman detail transaksi (berdasarkan indikator tunggal)!")
+                return True
+        
+        print(f"❌ Belum masuk ke halaman detail transaksi")
+        print(f"🔍 Debug: URL tidak mengandung transactionId dan hanya {len(found_indicators)} indikator ditemukan")
+        return False
+        
     except Exception as e:
         print(f"❌ Error verifikasi halaman detail transaksi: {str(e)}")
         return False
@@ -1442,4 +1762,3 @@ def get_customer_detail_info(driver):
     except Exception as e:
         print(f"❌ Error mengambil detail pelanggan: {str(e)}")
         return None
-
