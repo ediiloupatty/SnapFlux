@@ -18,12 +18,12 @@ SnapFlux is an automated web scraping and data extraction application for the [s
 
 ### 📋 Main Menu Options
 
-1. **Check Stok** - Automated stock monitoring and sales tracking
+1. **Check Stock** - Automated stock monitoring and sales tracking
    - Automatic stock data retrieval from dashboard
    - Sales tracking with optional date filtering
    - Excel export with clean pivot format
-2. **Batalkan Inputan** ⭐ NEW in v2
-   - Navigate to Sales Summary (Rekap Penjualan)
+2. **Cancel Input** ⭐ NEW in v2
+   - Navigate to Sales Summary
    - Display customer list from the system
    - Support date filtering for specific data search
    - Transaction cancellation workflow for duplicate entries
@@ -101,7 +101,7 @@ ENCRYPTION_KEY=your-encryption-key-here
 
 Edit `akun/akun.xlsx` with:
 
-- Pangkalan name
+- Pangkalan name (Merchant name)
 - Username (email/phone)
 - PIN credentials
 
@@ -164,18 +164,18 @@ pip install -r requirements.txt
 
 ## 📊 Features in Detail
 
-### Feature 1: Check Stok
+### Feature 1: Check Stock
 
 - **Stock Monitoring**: Automatic stock data retrieval from dashboard
-- **Sales Tracking**: Sales data with "X Tabung" format
+- **Sales Tracking**: Sales data with "X Cylinder" format
 - **Date Filtering**: Filter reports by specific date ranges (optional)
-- **Status Detection**: Auto-detect status (Ada Penjualan/Tidak Ada Penjualan)
+- **Status Detection**: Auto-detect status (Sales Available/No Sales)
 - **Excel Export**: Export results to Excel with clean pivot format
 - **Progress Tracking**: Real-time progress monitoring with detailed logging
 
-### Feature 2: Batalkan Inputan (NEW in v2)
+### Feature 2: Cancel Input (NEW in v2)
 
-- **Sales Summary Navigation**: Automatic navigation to Sales Summary (Rekap Penjualan) page
+- **Sales Summary Navigation**: Automatic navigation to Sales Summary page
 - **Customer List Display**: Display customer list from Sales Summary
 - **Date Filtering**: Support date filtering for specific data search
 - **Transaction Cancellation**: Workflow for canceling duplicate transactions
@@ -183,7 +183,7 @@ pip install -r requirements.txt
 - **Terminal Display**: Display results directly in terminal with clean format
 - **Status Tracking**: Track success/failure for each processed account
 
-> **Note**: Batalkan Inputan feature is not available in v1 and is exclusive to v2.0
+> **Note**: Cancel Input feature is not available in v1 and is exclusive to v2.0
 
 ### Enhanced Enterprise Features (v2.0)
 
@@ -197,7 +197,7 @@ pip install -r requirements.txt
 
 ### Major Features Added
 
-1. **🆕 Batalkan Inputan Feature** - New feature for Sales Summary navigation and customer list display (not available in v1)
+1. **🆕 Cancel Input Feature** - New feature for Sales Summary navigation and customer list display (not available in v1)
 2. **🚀 Performance Optimization** - Streamlined codebase with removed unused modules
 3. **⚡ Direct Selector Implementation** - Hardcoded selectors for faster element detection
 
