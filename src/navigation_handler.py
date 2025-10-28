@@ -8,7 +8,27 @@ from selenium.webdriver.common.by import By
 from .constants import BULAN_ID, BULAN_SINGKAT
 
 def click_laporan_penjualan_direct(driver):
-    """Klik menu 'Laporan Penjualan' langsung menggunakan lokasi yang sudah diketahui - lebih cepat"""
+    """
+    ============================================
+    FUNGSI NAVIGASI KE HALAMAN LAPORAN PENJUALAN
+    ============================================
+    
+    Fungsi ini melakukan navigasi ke halaman Laporan Penjualan dengan menggunakan
+    direct selector yang sudah dioptimasi untuk performa maksimal.
+    
+    Proses yang dilakukan:
+    1. Mencari elemen dengan text "Laporan Penjualan" menggunakan XPath
+    2. Validasi bahwa elemen yang ditemukan benar-benar menu Laporan Penjualan
+    3. Cek apakah elemen dapat diklik (is_displayed dan is_enabled)
+    4. Klik elemen jika valid
+    5. Fallback ke class selector jika XPath gagal
+    
+    Args:
+        driver: WebDriver object yang sudah login ke portal merchant
+    
+    Returns:
+        bool: True jika berhasil navigasi ke Laporan Penjualan, False jika gagal
+    """
     print("\n📊 === KLIK LAPORAN PENJUALAN LANGSUNG ===")
     try:
         time.sleep(1.5)
@@ -447,7 +467,32 @@ def click_date_elements_direct(driver, selected_date=None):
         return False
 
 def click_date_elements_rekap_penjualan(driver, selected_date=None):
-    """Klik elemen tanggal di halaman Rekap Penjualan dengan flexible dynamic selector"""
+    """
+    ============================================
+    FUNGSI FILTER TANGGAL DI REKAP PENJUALAN
+    ============================================
+    
+    Fungsi ini melakukan filter tanggal di halaman Rekap Penjualan dengan menggunakan
+    flexible dynamic selector yang dapat menangani input tanggal yang berubah-ubah.
+    
+    Proses yang dilakukan:
+    1. Klik "Atur Rentang Waktu" menggunakan ID selector yang stabil
+    2. Klik bulan tahun (contoh: "Oktober 2025") menggunakan dynamic text selector
+    3. Klik bulan singkat (contoh: "Okt") menggunakan exact text selector
+    4. Klik tanggal spesifik (contoh: "28") menggunakan exact text selector
+    5. Klik tanggal 2x untuk memastikan filter diterapkan
+    
+    Setiap step menggunakan 2-tier strategy:
+    - Tier 1: Dynamic XPath dengan user input (FAST)
+    - Tier 2: Class selector dengan validasi text (FALLBACK)
+    
+    Args:
+        driver: WebDriver object yang sudah berada di halaman Rekap Penjualan
+        selected_date (datetime): Tanggal yang dipilih user untuk filter
+    
+    Returns:
+        bool: True jika berhasil menerapkan filter tanggal, False jika gagal
+    """
     print("\n📅 === KLIK ELEMEN TANGGAL DI REKAP PENJUALAN ===")
     
     try:

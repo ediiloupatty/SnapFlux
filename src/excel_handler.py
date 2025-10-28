@@ -35,7 +35,48 @@ def get_day_color(date_str):
         return "FFFFFF"  # Putih jika error parsing tanggal
 
 def save_to_excel_pivot_format(pangkalan_id, nama_pangkalan, tanggal_check, stok_awal, total_inputan, status, selected_date=None):
-    """Simpan data ke Excel dengan format pivot incremental yang optimal"""
+    """
+    ============================================
+    FUNGSI SIMPAN DATA KE EXCEL DENGAN FORMAT PIVOT
+    ============================================
+    
+    Fungsi ini menyimpan data hasil scraping ke file Excel dengan format pivot
+    yang optimal untuk analisis data. Menggunakan sistem incremental untuk
+    menambahkan data baru ke file master yang sudah ada.
+    
+    Proses yang dilakukan:
+    1. Generate nama file Excel berdasarkan tanggal (master format)
+    2. Parse data stok dan inputan dari string ke integer
+    3. Tentukan tanggal operasi (dari filter atau tanggal sekarang)
+    4. Generate timestamp dengan format AM/PM
+    5. Cek apakah file Excel sudah ada:
+       - Jika ada: Load file dan tambahkan data baru
+       - Jika tidak ada: Buat file baru dengan header
+    6. Tambahkan data baru ke sheet yang sesuai
+    7. Apply formatting (border, alignment, warna hari)
+    8. Simpan file Excel
+    
+    Format data yang disimpan:
+    - PANGKALAN_ID: ID pangkalan merchant
+    - NAMA_PANGKALAN: Nama pangkalan merchant
+    - TANGGAL_CHECK: Tanggal operasi
+    - STOK_AWAL: Stok awal dari dashboard
+    - TOTAL_INPUTAN: Total tabung terjual
+    - STATUS: Status penjualan (Ada Penjualan/Tidak Ada Penjualan)
+    - TIME: Timestamp operasi
+    
+    Args:
+        pangkalan_id (str): ID pangkalan merchant
+        nama_pangkalan (str): Nama pangkalan merchant
+        tanggal_check (str): Tanggal check dalam format string
+        stok_awal (str): Stok awal dari dashboard
+        total_inputan (str): Total inputan dalam format "X Tabung"
+        status (str): Status penjualan
+        selected_date (datetime): Tanggal yang dipilih user (optional)
+    
+    Returns:
+        None: Menyimpan data ke file Excel
+    """
     
     # Gunakan file master untuk sistem incremental
     filename = get_master_filename(selected_date)

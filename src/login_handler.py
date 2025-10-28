@@ -20,13 +20,26 @@ logger = logging.getLogger('automation')
 
 def login_direct(username, pin):
     """
-    Login langsung dengan strategi yang sudah terbukti berhasil
-    Fungsi ini melakukan login otomatis ke portal merchant dengan retry mechanism
+    ============================================
+    FUNGSI LOGIN OTOMATIS KE PORTAL MERCHANT
+    ============================================
+    
+    Fungsi ini melakukan login otomatis ke portal merchant Pertamina dengan strategi
+    yang sudah terbukti berhasil. Menggunakan direct selector untuk performa optimal.
+    
+    Proses yang dilakukan:
+    1. Setup Chrome WebDriver dengan konfigurasi optimal
+    2. Navigasi ke halaman login
+    3. Mencari dan mengisi field email/username
+    4. Mencari dan mengisi field PIN/password
+    5. Mencari dan mengklik tombol login
+    6. Deteksi pesan "Gagal Masuk Akun" jika ada
+    7. Return WebDriver object jika berhasil
     
     Args:
-        username (str): Username berupa email atau nomor HP
-        pin (str): PIN untuk authentication
-        
+        username (str): Username berupa email atau nomor HP merchant
+        pin (str): PIN untuk authentication ke portal
+    
     Returns:
         tuple: (webdriver.Chrome, dict) - WebDriver object dan info gagal masuk akun
                Jika login berhasil: (driver, {'gagal_masuk_akun': False, 'count': 0})
@@ -416,16 +429,31 @@ def click_rekap_penjualan_direct(driver):
 
 def get_customer_list_direct(driver, pin):
     """
-    Mengambil data list pembeli dari halaman Rekap Penjualan dengan pola yang sudah diketahui
-    Berdasarkan debugging: Struktur Nama → HP/NIK → "Jenis Pelanggan" → "X Tabung LPG 3Kg"
-    Jika pembeli membeli >1 tabung, akan diklik untuk melihat detail dan membatalkan transaksi
+    ============================================
+    FUNGSI AMBIL DATA LIST PEMBELI DARI REKAP PENJUALAN
+    ============================================
+    
+    Fungsi ini mengambil data list pembeli dari halaman Rekap Penjualan dan melakukan
+    analisis untuk menemukan pembeli dengan >1 tabung yang perlu dibatalkan.
+    
+    Proses yang dilakukan:
+    1. Ambil semua teks dari halaman Rekap Penjualan
+    2. Analisis pola data: Nama → HP/NIK → Jenis Pelanggan → X Tabung LPG
+    3. Identifikasi pembeli dengan >1 tabung
+    4. Untuk setiap pembeli dengan >1 tabung:
+       - Klik nama pembeli untuk masuk ke detail
+       - Analisis jenis pembelian (Rumah Tangga/Usaha Mikro)
+       - Jika Rumah Tangga dengan >1 tabung, lakukan pembatalan transaksi
+       - Kembali ke halaman Rekap Penjualan
+    5. Refresh halaman dan ulangi proses sampai tidak ada lagi pembeli dengan >1 tabung
     
     Args:
         driver: WebDriver object yang sudah berada di halaman Rekap Penjualan
-        pin: PIN dari akun yang sedang login
-        
+        pin: PIN dari akun yang sedang login untuk konfirmasi pembatalan
+    
     Returns:
-        list: List nama pembeli dengan format "Nama Lengkap (Nomor HP/NIK) - X Tabung", atau None jika gagal
+        list: List nama pembeli dengan format "Nama Lengkap (Nomor HP/NIK) - X Tabung"
+               atau None jika gagal mengambil data
     """
     print("👥 Mengambil data list pembeli...")
     
@@ -887,18 +915,35 @@ def verify_transaction_detail_page(driver):
 
 def cancel_transaction(driver, pin):
     """
-    Membatalkan transaksi dengan direct class/name selector tanpa iterasi
-    Berdasarkan terminal output: Semua button berhasil dengan selector langsung
+    ============================================
+    FUNGSI PEMBATALAN TRANSAKSI OTOMATIS
+    ============================================
+    
+    Fungsi ini melakukan pembatalan transaksi secara otomatis dengan menggunakan
+    direct selector yang sudah dioptimasi berdasarkan debugging sebelumnya.
+    
+    Proses yang dilakukan:
+    1. Klik tombol "Rincian" untuk membuka detail transaksi
+    2. Klik tombol "BATALKAN" untuk memulai proses pembatalan
+    3. Klik tombol "YA, BATALKAN TRANSAKSI" untuk konfirmasi
+    4. Isi alasan pembatalan dengan text "Salah Inputan"
+    5. Isi PIN untuk konfirmasi pembatalan
+    6. Klik tombol "BATALKAN TRANSAKSI" untuk menyelesaikan pembatalan
+    
+    Semua langkah menggunakan direct selector untuk performa optimal dan
+    memiliki fallback mechanism jika selector utama gagal.
     
     Args:
         driver: WebDriver object yang sudah berada di halaman detail transaksi
-        pin: PIN dari akun yang sedang login
-        
+        pin: PIN dari akun untuk konfirmasi pembatalan
+    
     Returns:
-        bool: True jika berhasil membatalkan transaksi, False jika gagal
+        bool: True jika pembatalan berhasil, False jika gagal
     """
+    
+    print("🔄 Memulai proses pembatalan transaksi...")
+    
     try:
-        print(f"🔄 Memulai proses pembatalan transaksi...")
         
         # Ambil informasi detail transaksi terlebih dahulu
         get_transaction_detail_info(driver)

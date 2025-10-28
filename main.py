@@ -40,10 +40,24 @@ from src.excel_handler import save_to_excel_pivot_format
 
 def run_batalkan_inputan(accounts, selected_date):
     """
-    Fungsi untuk menjalankan fitur Batalkan Inputan
-    Melakukan login, navigasi ke Laporan Penjualan, lalu ke Rekap Penjualan,
-    menerapkan filter tanggal di Rekap Penjualan (jika ada input tanggal),
-    dan menampilkan list pembeli di terminal
+    ============================================
+    FUNGSI UTAMA: BATALKAN INPUTAN
+    ============================================
+    
+    Fungsi ini menjalankan fitur pembatalan inputan yang meliputi:
+    1. Login otomatis ke setiap akun merchant
+    2. Navigasi ke halaman Laporan Penjualan
+    3. Navigasi ke halaman Rekap Penjualan
+    4. Menerapkan filter tanggal (jika user input tanggal)
+    5. Mengambil data list pembeli dengan >1 tabung
+    6. Menampilkan hasil di terminal dengan format yang rapi
+    
+    Args:
+        accounts (list): List akun merchant (nama, username, pin)
+        selected_date (datetime): Tanggal yang dipilih user untuk filter (optional)
+    
+    Returns:
+        None: Menampilkan hasil langsung di terminal
     """
     print(f"\n🚀 Memulai proses Batalkan Inputan...")
     
@@ -246,8 +260,31 @@ def run_batalkan_inputan(accounts, selected_date):
 
 def main():
     """
-    Fungsi utama untuk menjalankan automation batch processing
-    Memproses multiple akun dengan retry mechanism dan tracking hasil
+    ============================================
+    FUNGSI UTAMA: CHECK STOK
+    ============================================
+    
+    Fungsi utama untuk menjalankan automation batch processing fitur Check Stok.
+    Melakukan pemrosesan multiple akun dengan retry mechanism dan tracking hasil.
+    
+    Proses yang dilakukan:
+    1. Setup logging dan load data akun dari Excel
+    2. Minta input menu dari user (Check Stok atau Batalkan Inputan)
+    3. Minta input tanggal filter (optional)
+    4. Loop pemrosesan setiap akun:
+       - Login otomatis dengan retry mechanism
+       - Ambil data stok dari dashboard
+       - Navigasi ke Laporan Penjualan
+       - Terapkan filter tanggal (jika ada)
+       - Ambil data tabung terjual
+       - Simpan data ke Excel dengan format pivot
+    5. Tampilkan rekap akhir dengan statistik lengkap
+    
+    Args:
+        None: Menggunakan data dari file akun/akun.xlsx
+    
+    Returns:
+        None: Menyimpan hasil ke Excel dan menampilkan rekap di terminal
     """
     
     # Buat direktori yang diperlukan jika belum ada

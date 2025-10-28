@@ -21,8 +21,32 @@ logger = logging.getLogger('automation')
 
 def setup_logging():
     """
-    Setup konfigurasi logging untuk system automation
-    Membuat file log dengan rotating handler untuk mencegah file terlalu besar
+    ============================================
+    FUNGSI SETUP LOGGING SYSTEM
+    ============================================
+    
+    Fungsi ini mengatur konfigurasi logging untuk sistem automation dengan
+    rotating file handler untuk mencegah file log menjadi terlalu besar.
+    
+    Proses yang dilakukan:
+    1. Membuat direktori logs jika belum ada
+    2. Set level logging ke DEBUG untuk detail maksimal
+    3. Setup rotating file handler dengan batas 2MB per file
+    4. Konfigurasi formatter untuk format timestamp dan level
+    5. Menambahkan handler ke logger
+    
+    Konfigurasi logging:
+    - Level: DEBUG (detail maksimal)
+    - Max file size: 2MB per file
+    - Backup count: 3 file backup
+    - Encoding: UTF-8 untuk support karakter Indonesia
+    - Format: Timestamp + Level + Message
+    
+    Args:
+        None: Menggunakan konfigurasi default
+    
+    Returns:
+        None: Setup logging system
     """
     os.makedirs(LOGS_DIR, exist_ok=True)  # Buat direktori logs jika belum ada
     
@@ -36,15 +60,37 @@ def setup_logging():
 
 def load_accounts_from_excel(filename):
     """
-    Load data akun dari file Excel dengan validasi lengkap
-    Membaca file Excel dan memvalidasi setiap akun sebelum digunakan
+    ============================================
+    FUNGSI LOAD DATA AKUN DARI FILE EXCEL
+    ============================================
+    
+    Fungsi ini membaca dan memvalidasi data akun merchant dari file Excel
+    dengan validasi lengkap untuk memastikan data yang digunakan valid.
+    
+    Proses yang dilakukan:
+    1. Membaca file Excel dengan pandas dengan tipe data string
+    2. Loop setiap baris untuk validasi data:
+       - Validasi username (harus email atau nomor HP yang valid)
+       - Validasi PIN (harus angka 4-8 digit)
+       - Strip whitespace dari semua field
+    3. Tambahkan akun yang valid ke list
+    4. Return list akun yang sudah divalidasi
+    
+    Format file Excel yang diharapkan:
+    - Kolom "Nama": Nama pangkalan merchant
+    - Kolom "Username": Email atau nomor HP merchant
+    - Kolom "Password": PIN untuk login
+    
+    Validasi yang dilakukan:
+    - Username: Email format atau nomor HP (10-15 digit, awalan 08/628)
+    - PIN: Hanya angka, panjang 4-8 digit
     
     Args:
         filename (str): Path ke file Excel yang berisi data akun
-        
+    
     Returns:
         list: List tuple berisi (nama, username, pin) untuk akun yang valid
-        
+    
     Raises:
         ValueError: Jika tidak ada akun valid ditemukan di file Excel
     """

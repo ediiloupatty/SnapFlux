@@ -8,7 +8,29 @@ from datetime import datetime
 from selenium.webdriver.common.by import By
 
 def get_stock_value_direct(driver):
-    """Ambil nilai stok langsung menggunakan lokasi yang sudah diketahui - SUPER CEPAT"""
+    """
+    ============================================
+    FUNGSI AMBIL DATA STOK DARI DASHBOARD
+    ============================================
+    
+    Fungsi ini mengambil data stok dari dashboard merchant dengan menggunakan
+    direct class selector yang sudah dioptimasi untuk performa maksimal.
+    
+    Proses yang dilakukan:
+    1. Mencari elemen stok menggunakan class selector yang sudah diketahui
+    2. Extract text dari elemen stok
+    3. Menggunakan regex untuk mengambil angka pertama dari text
+    4. Return nilai stok dalam format string
+    
+    Fungsi ini sangat cepat karena menggunakan direct selector tanpa iterasi
+    dan sudah terbukti berhasil berdasarkan debugging sebelumnya.
+    
+    Args:
+        driver: WebDriver object yang sudah login dan berada di dashboard
+    
+    Returns:
+        str: Nilai stok dalam format string (contoh: "150"), atau None jika gagal
+    """
     print("\n📦 === AMBIL DATA STOK LANGSUNG ===")
     try:
         time.sleep(1.5)
@@ -37,7 +59,32 @@ def get_stock_value_direct(driver):
         return None
 
 def get_tabung_terjual_direct(driver):
-    """Ambil data 'xxx Tabung' langsung menggunakan lokasi yang sudah diketahui - lebih cepat"""
+    """
+    ============================================
+    FUNGSI AMBIL DATA TABUNG TERJUAL DARI LAPORAN PENJUALAN
+    ============================================
+    
+    Fungsi ini mengambil data tabung terjual dari halaman Laporan Penjualan dengan
+    menggunakan direct selector yang sudah dioptimasi untuk performa maksimal.
+    
+    Proses yang dilakukan:
+    1. Mencari elemen dengan class "mantine-Text-root" yang berisi data tabung
+    2. Filter elemen yang mengandung kata "tabung" dan angka
+    3. Skip elemen yang merupakan header "Total Tabung LPG 3 Kg Terjual"
+    4. Extract angka dari text yang ditemukan
+    5. Return data dalam format "X Tabung"
+    6. Fallback ke XPath selector jika class selector gagal
+    
+    Fungsi ini sangat cepat karena menggunakan direct selector tanpa iterasi
+    dan sudah terbukti berhasil berdasarkan debugging sebelumnya.
+    
+    Args:
+        driver: WebDriver object yang sudah berada di halaman Laporan Penjualan
+    
+    Returns:
+        str: Data tabung terjual dalam format "X Tabung" (contoh: "28 Tabung"), 
+             atau None jika gagal mengambil data
+    """
     print("\n📊 === AMBIL DATA TABUNG TERJUAL LANGSUNG ===")
     
     try:
