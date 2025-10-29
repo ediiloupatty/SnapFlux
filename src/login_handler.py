@@ -64,8 +64,8 @@ def login_direct(username, pin):
         driver = setup_driver(headless=headless_mode)
         driver.get(LOGIN_URL)
         
-        # Tunggu halaman loading - ANTI-RATE LIMITING
-        time.sleep(DEFAULT_DELAY)
+        # Tunggu halaman loading - OPTIMIZED DELAY
+        time.sleep(1.0)  # Reduced from DEFAULT_DELAY to 1.0 second
         
         # Langsung cari dan isi email
         print("📧 Mencari dan mengisi field email...")
@@ -132,8 +132,8 @@ def login_direct(username, pin):
             print("❌ Gagal mengklik tombol login")
             return None
         
-        # Tunggu proses login - ANTI-RATE LIMITING
-        time.sleep(DEFAULT_DELAY)
+        # Tunggu proses login - OPTIMIZED DELAY
+        time.sleep(1.5)  # Reduced from DEFAULT_DELAY to 1.5 seconds
         
         # === DETEKSI CEPAT "GAGAL MASUK AKUN" ===
         gagal_masuk_detected = False
@@ -152,10 +152,10 @@ def login_direct(username, pin):
         if gagal_masuk_detected:
             print("🔄 === PROSES RETRY LOGIN SETELAH GAGAL MASUK AKUN ===")
             
-            # Tunggu 2 menit (120 detik)
-            print("⏳ Menunggu 2 menit (120 detik)...")
-            time.sleep(120)
-            print("✅ Tunggu 2 menit selesai!")
+            # Tunggu 30 detik - OPTIMIZED
+            print("⏳ Menunggu 30 detik...")
+            time.sleep(30)
+            print("✅ Tunggu 30 detik selesai!")
             
             # Langsung klik tombol MASUK lagi tanpa reload - OPTIMIZED
             print("🔄 Mengklik tombol MASUK lagi tanpa reload...")
@@ -192,7 +192,7 @@ def login_direct(username, pin):
             
             # Tunggu proses login kedua - OPTIMIZED
             print("⏳ Menunggu proses login kedua...")
-            time.sleep(1.5)  # Kurangi dari 3 ke 1.5 detik
+            time.sleep(1.0)  # Further reduced to 1.0 second
         
         # Cek apakah login berhasil (setelah retry jika ada)
         current_url = driver.current_url
@@ -225,10 +225,10 @@ def click_laporan_penjualan_direct(driver):
     print("🔍 Mencari elemen Laporan Penjualan...")
     
     try:
-        # Tunggu sebentar untuk memastikan halaman sudah load
-        time.sleep(2.0)
+        # Tunggu sebentar untuk memastikan halaman sudah load - OPTIMIZED
+        time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
         
-        # Debug: Ambil semua elemen yang mungkin terkait dengan "Laporan Penjualan"
+        # Debug: Ambil semua elemen yang mungkin terkait dengan "Laporan Penjualan" - OPTIMIZED (reduced output)
         print("\n🔍 === DEBUGGING SEMUA ELEMEN TERKAIT LAPORAN PENJUALAN ===")
         
         # Cari semua elemen yang mengandung teks "Laporan Penjualan"
@@ -258,7 +258,7 @@ def click_laporan_penjualan_direct(driver):
                     print(f"\n📍 Selector {i+1}: {selector}")
                     print(f"   Ditemukan {len(elements)} elemen")
                     
-                    for j, element in enumerate(elements):
+                    for j, element in enumerate(elements[:3]):  # Limit to first 3 elements
                         try:
                             text = element.text.strip()
                             tag_name = element.tag_name
@@ -301,7 +301,7 @@ def click_laporan_penjualan_direct(driver):
             except Exception as e:
                 print(f"   Selector {i+1}: Error - {str(e)}")
         
-        # Debug: Cari semua elemen yang terlihat di halaman
+        # Debug: Cari semua elemen yang terlihat di halaman - OPTIMIZED (reduced output)
         print(f"\n🔍 === DEBUGGING SEMUA ELEMEN YANG TERLIHAT ===")
         try:
             all_visible_elements = driver.find_elements(By.XPATH, "//*[text()]")
@@ -321,7 +321,7 @@ def click_laporan_penjualan_direct(driver):
             
             print(f"Ditemukan {len(relevant_elements)} elemen relevan dengan keyword menu")
             
-            for i, element in enumerate(relevant_elements[:10]):  # Limit 10 untuk readability
+            for i, element in enumerate(relevant_elements[:5]):  # Limit to 5 for readability
                 try:
                     text = element.text.strip()
                     tag_name = element.tag_name
@@ -352,9 +352,9 @@ def click_laporan_penjualan_direct(driver):
             print("❌ Tidak ada elemen Laporan Penjualan yang bisa diklik")
             return False
         
-        # Tunggu navigasi ke halaman Laporan Penjualan
+        # Tunggu navigasi ke halaman Laporan Penjualan - OPTIMIZED
         print("⏳ Menunggu navigasi ke halaman Laporan Penjualan...")
-        time.sleep(3.0)
+        time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
         
         # Verifikasi bahwa sudah berada di halaman Laporan Penjualan
         current_url = driver.current_url
@@ -389,8 +389,8 @@ def click_rekap_penjualan_direct(driver):
     print("📈 Mengklik Rekap Penjualan...")
     
     try:
-        # Tunggu sebentar untuk memastikan halaman sudah load
-        time.sleep(2.0)
+        # Tunggu sebentar untuk memastikan halaman sudah load - OPTIMIZED
+        time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
         
         # Langsung gunakan selector yang sudah diketahui dari debugging
         try:
@@ -403,8 +403,8 @@ def click_rekap_penjualan_direct(driver):
                 print(f"🔍 Debug Rekap Penjualan Success: XPath='//div[contains(text(), 'Rekap Penjualan')]'")
                 print("✅ Berhasil mengklik Rekap Penjualan!")
                 
-                # Tunggu navigasi ke halaman Rekap Penjualan
-                time.sleep(3.0)
+                # Tunggu navigasi ke halaman Rekap Penjualan - OPTIMIZED
+                time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
                 
                 # Verifikasi navigasi
                 current_url = driver.current_url
@@ -458,8 +458,8 @@ def get_customer_list_direct(driver, pin):
     print("👥 Mengambil data list pembeli...")
     
     try:
-        # Tunggu sebentar untuk memastikan halaman sudah load
-        time.sleep(2.0)
+        # Tunggu sebentar untuk memastikan halaman sudah load - OPTIMIZED
+        time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
         
         # Ambil semua teks dari halaman
         all_elements = driver.find_elements(By.XPATH, "//*[text()]")
@@ -472,10 +472,12 @@ def get_customer_list_direct(driver, pin):
         
         print(f"📊 Ditemukan {len(all_texts)} elemen dengan teks")
         
-        # DEBUG: Tampilkan semua teks untuk analisis
+        # DEBUG: Tampilkan semua teks untuk analisis - OPTIMIZED (reduced output)
         print(f"🔍 Debug: Semua teks yang ditemukan:")
-        for idx, text in enumerate(all_texts):
+        for idx, text in enumerate(all_texts[:20]):  # Limit to first 20 for readability
             print(f"   {idx:2d}: '{text}'")
+        if len(all_texts) > 20:
+            print(f"   ... dan {len(all_texts) - 20} teks lainnya")
         
         # Proses data berdasarkan pola yang sudah diketahui
         customer_list = []
@@ -510,8 +512,9 @@ def get_customer_list_direct(driver, pin):
                         'Jenis Pelanggan' in next_text2 and
                         'Tabung LPG' in next_text3):
                         
-                        # Debug validation messages
-                        print(f"🔍 Debug: Validating - NIK: {next_text1}, Jenis: {next_text2}, Tabung: {next_text3}")
+                        # Debug validation messages - OPTIMIZED (reduced output)
+                        if idx < 5:  # Only show first 5 validations
+                            print(f"🔍 Debug: Validating - NIK: {next_text1}, Jenis: {next_text2}, Tabung: {next_text3}")
                         
                         # Extract jumlah tabung dari next_text3
                         # Contoh: "1 Tabung LPG 3Kg", "3 Tabung LPG 3Kg", "2 Tabung LPG 3Kg"
@@ -519,7 +522,8 @@ def get_customer_list_direct(driver, pin):
                         tabung_match = re.search(r'(\d+)\s+Tabung LPG', next_text3)
                         jumlah_tabung = tabung_match.group(1) if tabung_match else "?"
                         
-                        print(f"🔍 Debug: Extracted tabung - Raw: '{next_text3}', Match: {jumlah_tabung}, Jumlah: {jumlah_tabung}")
+                        if idx < 5:  # Only show first 5 extractions
+                            print(f"🔍 Debug: Extracted tabung - Raw: '{next_text3}', Match: {jumlah_tabung}, Jumlah: {jumlah_tabung}")
                         
                         # Format data pembeli dengan informasi jumlah tabung
                         customer_info = f"{current_text} ({next_text1}) - {jumlah_tabung} Tabung"
@@ -539,11 +543,12 @@ def get_customer_list_direct(driver, pin):
                         i += 4
                         continue
                     else:
-                        # Debug mengapa tidak valid
-                        print(f"🔍 Debug: Skip '{current_text}' - tidak memenuhi kriteria:")
-                        print(f"   - NIK: '{next_text1}' (startswith 710/717/917/920/711: {next_text1.startswith(('710', '717', '917', '920', '711'))})")
-                        print(f"   - Jenis: '{next_text2}' (contains 'Jenis Pelanggan': {'Jenis Pelanggan' in next_text2})")
-                        print(f"   - Tabung: '{next_text3}' (contains 'Tabung LPG': {'Tabung LPG' in next_text3})")
+                        # Debug mengapa tidak valid - OPTIMIZED (reduced output)
+                        if idx < 3:  # Only show first 3 skips
+                            print(f"🔍 Debug: Skip '{current_text}' - tidak memenuhi kriteria:")
+                            print(f"   - NIK: '{next_text1}' (startswith 710/717/917/920/711: {next_text1.startswith(('710', '717', '917', '920', '711'))})")
+                            print(f"   - Jenis: '{next_text2}' (contains 'Jenis Pelanggan': {'Jenis Pelanggan' in next_text2})")
+                            print(f"   - Tabung: '{next_text3}' (contains 'Tabung LPG': {'Tabung LPG' in next_text3})")
             
             i += 1
         
@@ -557,7 +562,7 @@ def get_customer_list_direct(driver, pin):
             
             # Process customers in a loop, rechecking after each cancellation
             processed_customers = []
-            max_iterations = 10  # Prevent infinite loop
+            max_iterations = 5  # Reduced from 10 to 5 to prevent long loops
             iteration = 0
             
             while iteration < max_iterations:
@@ -566,14 +571,14 @@ def get_customer_list_direct(driver, pin):
                 print(f"🔄 Iterasi {iteration}: Mencari ulang pembeli dengan >1 tabung...")
                 print(f"{'='*60}")
                 
-                # Refresh halaman untuk mendapatkan data terbaru
+                # Refresh halaman untuk mendapatkan data terbaru - OPTIMIZED
                 if iteration > 1:
                     print("🔄 Refresh halaman untuk mendapatkan data terbaru...")
                     driver.refresh()
-                    time.sleep(3.0)
+                    time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
                 
-                # Cari ulang pembeli dengan >1 tabung
-                time.sleep(2.0)
+                # Cari ulang pembeli dengan >1 tabung - OPTIMIZED
+                time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                 all_elements = driver.find_elements(By.XPATH, "//*[text()]")
                 all_texts = []
                 
@@ -653,8 +658,8 @@ def get_customer_list_direct(driver, pin):
                                         element.click()
                                         print(f"🔍 Debug Customer Click Success: XPath='//*[contains(text(), '{customer['name']}')]'")
                                         
-                                        # Tunggu halaman detail load
-                                        time.sleep(3.0)
+                                        # Tunggu halaman detail load - OPTIMIZED
+                                        time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
                                         
                                         # Ambil detail informasi dari halaman "Identitas Pelanggan"
                                         detail_info = get_customer_detail_info(driver)
@@ -710,12 +715,12 @@ def get_customer_list_direct(driver, pin):
                                                         cancel_result, cancelled_position = click_rumah_tangga_transaction(driver, pin)
                                                         if cancel_result:
                                                             print(f"   ✅ Berhasil membatalkan transaksi salah inputan untuk {customer['name']}")
-                                                            # Kembali ke halaman Rekap Penjualan
+                                                            # Kembali ke halaman Rekap Penjualan - OPTIMIZED
                                                             driver.back()
-                                                            time.sleep(2.0)
+                                                            time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                                                             # Kembali sekali lagi ke halaman Rekap Penjualan
                                                             driver.back()
-                                                            time.sleep(2.0)
+                                                            time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                                                             # Mark as processed
                                                             processed_customers.append(customer['key'])
                                                             # Break inner loop to recheck page
@@ -739,7 +744,7 @@ def get_customer_list_direct(driver, pin):
                                                         # Implementasi multiple cancellations dalam detail page
                                                         cancelled_positions = set()
                                                         cancellation_count = 0
-                                                        max_cancellations = 10
+                                                        max_cancellations = 5  # Reduced from 10 to 5
                                                         
                                                         print(f"   🔄 Memulai proses multiple cancellations untuk {customer['name']}...")
                                                         
@@ -756,8 +761,8 @@ def get_customer_list_direct(driver, pin):
                                                                 
                                                                 # Cek berapa transaksi aktif yang tersisa di halaman detail saat ini
                                                                 try:
-                                                                    # Tunggu sebentar untuk memastikan DOM sudah stabil setelah pembatalan
-                                                                    time.sleep(3.0)
+                                                                    # Tunggu sebentar untuk memastikan DOM sudah stabil setelah pembatalan - OPTIMIZED
+                                                                    time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
                                                                     
                                                                     # Refresh elemen untuk menghindari stale element reference
                                                                     print(f"   🔄 Refresh elemen setelah pembatalan untuk menghitung transaksi aktif...")
@@ -779,11 +784,11 @@ def get_customer_list_direct(driver, pin):
                                                                     if cancellation_count >= expected_cancellations:
                                                                         print(f"   ✅ Target tercapai! Sudah membatalkan {cancellation_count} transaksi (target: {expected_cancellations})")
                                                                         print(f"   ✅ Sisa {rumah_tangga_count} transaksi = {rumah_tangga_count} tabung (sesuai target)")
-                                                                        # Kembali ke halaman Rekap Penjualan
+                                                                        # Kembali ke halaman Rekap Penjualan - OPTIMIZED
                                                                         driver.back()
-                                                                        time.sleep(2.0)
+                                                                        time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                                                                         driver.back()
-                                                                        time.sleep(2.0)
+                                                                        time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                                                                         # Mark as processed
                                                                         processed_customers.append(customer['key'])
                                                                         # Break inner loop to recheck page
@@ -819,18 +824,20 @@ def get_customer_list_direct(driver, pin):
                                                                 print(f"   ❌ Gagal membatalkan transaksi ke-{cancellation_count + 1} untuk {customer['name']}")
                                                                 # Jika gagal, kembali ke Rekap Penjualan
                                                                 driver.back()
-                                                                time.sleep(2.0)
+                                                                time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                                                                 driver.back()
-                                                                time.sleep(2.0)
+                                                                time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                                                                 break
                                                         
                                                         # Jika loop selesai tanpa break, berarti sudah mencapai max_cancellations
                                                         if cancellation_count >= max_cancellations:
                                                             print(f"   ⚠️ Mencapai batas maksimal cancellations ({max_cancellations}) untuk {customer['name']}")
                                                             driver.back()
-                                                            time.sleep(2.0)
+                                                            time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
+
                                                             driver.back()
-                                                            time.sleep(2.0)
+                                                            time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
+
                                                             processed_customers.append(customer['key'])
                                                         
                                                         # Break inner loop to recheck page
@@ -928,8 +935,8 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
     try:
         print(f"🖱️ Mencari dan mengklik transaksi Rumah Tangga (skip yang sudah dibatalkan)...")
         
-        # Tunggu halaman load
-        time.sleep(2.0)
+        # Tunggu halaman load - OPTIMIZED
+        time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
         
         # Debug: Tampilkan informasi halaman saat ini
         current_url = driver.current_url
@@ -954,20 +961,22 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
         
         for i, element in enumerate(rumah_tangga_elements):
             try:
-                # Debug posisi detail untuk setiap elemen
+                # Debug posisi detail untuk setiap elemen - OPTIMIZED (reduced output)
                 element_location = element.location
                 element_size = element.size
                 element_class = element.get_attribute('class')
                 element_id = element.get_attribute('id')
                 
-                print(f"🔍 Debug Posisi Detail {i+1}: Location={element_location}, Size={element_size}, Class={element_class}, ID={element_id}")
+                if i < 3:  # Only show first 3 positions
+                    print(f"🔍 Debug Posisi Detail {i+1}: Location={element_location}, Size={element_size}, Class={element_class}, ID={element_id}")
                 
                 # Cek parent container untuk text "Transaksi Dibatalkan" dengan berbagai variasi
                 parent = element.find_element(By.XPATH, "../..")
                 parent_text = parent.text
                 
-                # Debug parent text untuk analisis
-                print(f"🔍 Debug Parent Text {i+1}: '{parent_text[:100]}...' (truncated)")
+                # Debug parent text untuk analisis - OPTIMIZED (reduced output)
+                if i < 3:  # Only show first 3 parent texts
+                    print(f"🔍 Debug Parent Text {i+1}: '{parent_text[:100]}...' (truncated)")
                 
                 # Cek berbagai variasi text pembatalan
                 cancelled_keywords = [
@@ -983,10 +992,12 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                 
                 if is_cancelled:
                     cancelled_count += 1
-                    print(f"🔍 Debug: Transaksi {i+1} sudah dibatalkan - SKIP (detected keyword)")
+                    if i < 3:  # Only show first 3 cancellations
+                        print(f"🔍 Debug: Transaksi {i+1} sudah dibatalkan - SKIP (detected keyword)")
                 elif cancelled_positions and i in cancelled_positions:
                     cancelled_count += 1
-                    print(f"🔍 Debug: Transaksi {i+1} sudah dibatalkan sebelumnya (posisi {i}) - SKIP")
+                    if i < 3:  # Only show first 3 cancellations
+                        print(f"🔍 Debug: Transaksi {i+1} sudah dibatalkan sebelumnya (posisi {i}) - SKIP")
                 else:
                     # Simpan elemen aktif tanpa perlu klik untuk mendapatkan URL
                     active_transactions.append({
@@ -996,7 +1007,8 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                         'location': element_location,
                         'size': element_size
                     })
-                    print(f"🔍 Debug: Transaksi {i+1} aktif - TERSEDIA (Location: {element_location})")
+                    if i < 3:  # Only show first 3 active transactions
+                        print(f"🔍 Debug: Transaksi {i+1} aktif - TERSEDIA (Location: {element_location})")
                         
             except Exception as e:
                 print(f"🔍 Debug: Error cek transaksi {i+1}: {str(e)}")
@@ -1051,7 +1063,7 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                     print(f"🔍 Debug: URL sebelum klik: {url_before}")
                     
                     parent.click()
-                    time.sleep(3.0)
+                    time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
                     
                     # Cek apakah URL berubah setelah klik
                     url_after = driver.current_url
@@ -1064,7 +1076,7 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                         # Coba klik elemen Rumah Tangga langsung
                         try:
                             target_element.click()
-                            time.sleep(3.0)
+                            time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
                             url_after_retry = driver.current_url
                             print(f"🔍 Debug: URL setelah retry klik elemen langsung: {url_after_retry}")
                             
@@ -1095,7 +1107,7 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                             print(f"⚠️ Transaksi ini sudah dibatalkan sebelumnya - SKIP")
                             # Kembali ke halaman sebelumnya
                             driver.back()
-                            time.sleep(2.0)
+                            time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                             # Mark posisi ini sebagai dibatalkan
                             cancelled_positions.add(target_transaction['index'])
                             # Refresh elemen karena DOM sudah berubah
@@ -1120,7 +1132,7 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                         # Kembali ke halaman sebelumnya untuk coba transaksi lain
                         try:
                             driver.back()
-                            time.sleep(2.0)
+                            time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                             
                             # Verifikasi bahwa kita kembali ke halaman yang benar
                             current_url = driver.current_url
@@ -1131,14 +1143,14 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                                     print(f"❌ Gagal navigasi ke Rekap Penjualan - mungkin perlu refresh halaman")
                                     # Jika gagal, refresh halaman dan coba lagi
                                     driver.refresh()
-                                    time.sleep(3.0)
+                                    time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
                                     click_rekap_penjualan_direct(driver)
                         except Exception as nav_e:
                             print(f"⚠️ Error saat navigasi kembali: {str(nav_e)}")
                             # Jika error, refresh halaman
                             try:
                                 driver.refresh()
-                                time.sleep(3.0)
+                                time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
                                 click_rekap_penjualan_direct(driver)
                             except Exception as refresh_e:
                                 print(f"❌ Error saat refresh halaman: {str(refresh_e)}")
@@ -1158,14 +1170,14 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                     try:
                         # Strategi alternatif 1: Scroll ke elemen dan gunakan JavaScript click
                         driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", target_transaction['element'])
-                        time.sleep(2.0)
+                        time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                         
                         # Coba klik dengan JavaScript
                         driver.execute_script("arguments[0].click();", target_transaction['element'])
                         print(f"✅ Berhasil klik menggunakan JavaScript")
                         
                         # Tunggu dan verifikasi apakah berhasil masuk ke halaman detail
-                        time.sleep(3.0)
+                        time.sleep(1.5)  # Reduced from 3.0 to 1.5 seconds
                         current_url = driver.current_url
                         if 'transactionId=' in current_url:
                             print(f"✅ Berhasil masuk ke halaman detail transaksi")
@@ -1182,7 +1194,7 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                             parent_element = target_transaction['element'].find_element(By.XPATH, "./..")
                             driver.execute_script("arguments[0].click();", parent_element)
                             print(f"✅ Berhasil klik parent element menggunakan JavaScript")
-                            time.sleep(2.0)
+                            time.sleep(1.0)  # Reduced from 2.0 to 1.0 second
                             return cancel_transaction(driver, pin)
                         except Exception as parent_error:
                             print(f"❌ Parent element click juga gagal: {str(parent_error)}")
@@ -1836,5 +1848,7 @@ def get_customer_detail_info(driver):
         return detail_info
         
     except Exception as e:
+        print(f"❌ Error mengambil detail pelanggan: {str(e)}")
+        return None
         print(f"❌ Error mengambil detail pelanggan: {str(e)}")
         return None
