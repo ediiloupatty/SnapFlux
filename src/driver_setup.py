@@ -98,6 +98,26 @@ def setup_driver(headless=False):
         
         # === OPTIMASI NETWORK ===
         options.add_argument("--aggressive-cache-discard")
+        
+        # === MENGATASI ERROR CLICK INTERCEPTED ===
+        options.add_argument("--disable-blink-features=AutomationControlled")  # Disable automation detection
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])  # Hide automation
+        options.add_experimental_option('useAutomationExtension', False)  # Disable automation extension
+        
+        # === MENGATASI ERROR GPU ===
+        options.add_argument("--disable-gpu-sandbox")  # Disable GPU sandbox
+        options.add_argument("--disable-software-rasterizer")  # Disable software rasterizer
+        options.add_argument("--disable-gpu-process-crash-limit")  # Disable GPU process crash limit
+        options.add_argument("--disable-gpu-memory-buffer-video-frames")  # Disable GPU memory buffer
+        options.add_argument("--disable-gpu-rasterization")  # Disable GPU rasterization
+        options.add_argument("--disable-zero-copy")  # Disable zero copy
+        options.add_argument("--disable-accelerated-2d-canvas")  # Disable accelerated 2D canvas
+        options.add_argument("--disable-accelerated-jpeg-decoding")  # Disable accelerated JPEG decoding
+        options.add_argument("--disable-accelerated-mjpeg-decode")  # Disable accelerated MJPEG decode
+        options.add_argument("--disable-accelerated-video-decode")  # Disable accelerated video decode
+        options.add_argument("--disable-webgl")  # Disable WebGL
+        options.add_argument("--disable-webgl2")  # Disable WebGL2
+        options.add_argument("--disable-3d-apis")  # Disable 3D APIs
         options.add_argument("--disable-background-networking")
         options.add_argument("--disable-background-timer-throttling")
         options.add_argument("--disable-client-side-phishing-detection")

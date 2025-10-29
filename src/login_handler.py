@@ -472,6 +472,11 @@ def get_customer_list_direct(driver, pin):
         
         print(f"📊 Ditemukan {len(all_texts)} elemen dengan teks")
         
+        # DEBUG: Tampilkan semua teks untuk analisis
+        print(f"🔍 Debug: Semua teks yang ditemukan:")
+        for idx, text in enumerate(all_texts):
+            print(f"   {idx:2d}: '{text}'")
+        
         # Proses data berdasarkan pola yang sudah diketahui
         customer_list = []
         customer_elements = []  # Simpan elemen untuk klik
@@ -484,13 +489,15 @@ def get_customer_list_direct(driver, pin):
             # Berdasarkan debugging: nama pembeli biasanya huruf besar, panjang, tidak mengandung angka di awal
             if (len(current_text) > 5 and 
                 current_text[0].isupper() and 
-                not current_text.startswith(('710', '717', '917', '920')) and
+                not current_text.startswith(('710', '717', '917', '920', '711')) and  # Tambahkan 711
                 'Jenis Pelanggan' not in current_text and
                 'Tabung LPG' not in current_text and
                 'Penjualan' not in current_text and
                 'Total' not in current_text and
                 'Jumlah' not in current_text and
-                'Atur Rentang Waktu' not in current_text):
+                'Atur Rentang Waktu' not in current_text and
+                'Rekap Penjualan' not in current_text and  # Tambahkan filter
+                'icon customer' not in current_text):  # Tambahkan filter
                 
                 # Cek 3 baris berikutnya untuk memastikan ini adalah data pembeli
                 if i + 3 < len(all_texts):
@@ -498,8 +505,8 @@ def get_customer_list_direct(driver, pin):
                     next_text2 = all_texts[i + 2]  # "Jenis Pelanggan"
                     next_text3 = all_texts[i + 3]  # "X Tabung LPG 3Kg"
                     
-                    # Validasi berdasarkan pola yang sudah diketahui
-                    if (next_text1.startswith(('710', '717', '917', '920')) and
+                    # Validasi berdasarkan pola yang sudah diketahui - PERLUAS VALIDASI
+                    if (next_text1.startswith(('710', '717', '917', '920', '711')) and  # Tambahkan 711
                         'Jenis Pelanggan' in next_text2 and
                         'Tabung LPG' in next_text3):
                         
@@ -531,6 +538,12 @@ def get_customer_list_direct(driver, pin):
                         # Skip 4 baris (nama, HP, jenis pelanggan, detail)
                         i += 4
                         continue
+                    else:
+                        # Debug mengapa tidak valid
+                        print(f"🔍 Debug: Skip '{current_text}' - tidak memenuhi kriteria:")
+                        print(f"   - NIK: '{next_text1}' (startswith 710/717/917/920/711: {next_text1.startswith(('710', '717', '917', '920', '711'))})")
+                        print(f"   - Jenis: '{next_text2}' (contains 'Jenis Pelanggan': {'Jenis Pelanggan' in next_text2})")
+                        print(f"   - Tabung: '{next_text3}' (contains 'Tabung LPG': {'Tabung LPG' in next_text3})")
             
             i += 1
         
@@ -578,20 +591,22 @@ def get_customer_list_direct(driver, pin):
                     
                     if (len(current_text) > 5 and 
                         current_text[0].isupper() and 
-                        not current_text.startswith(('710', '717', '917', '920')) and
+                        not current_text.startswith(('710', '717', '917', '920', '711')) and  # Tambahkan 711
                         'Jenis Pelanggan' not in current_text and
                         'Tabung LPG' not in current_text and
                         'Penjualan' not in current_text and
                         'Total' not in current_text and
                         'Jumlah' not in current_text and
-                        'Atur Rentang Waktu' not in current_text):
+                        'Atur Rentang Waktu' not in current_text and
+                        'Rekap Penjualan' not in current_text and  # Tambahkan filter
+                        'icon customer' not in current_text):  # Tambahkan filter
                         
                         if i + 3 < len(all_texts):
                             next_text1 = all_texts[i + 1]
                             next_text2 = all_texts[i + 2]
                             next_text3 = all_texts[i + 3]
                             
-                            if (next_text1.startswith(('710', '717', '917', '920')) and
+                            if (next_text1.startswith(('710', '717', '917', '920', '711')) and  # Tambahkan 711
                                 'Jenis Pelanggan' in next_text2 and
                                 'Tabung LPG' in next_text3):
                                 
@@ -755,8 +770,15 @@ def get_customer_list_direct(driver, pin):
                                                                     rumah_tangga_count = count_active_rumah_tangga_transactions(all_texts_detail)
                                                                     print(f"   📊 Transaksi aktif tersisa: {rumah_tangga_count}")
                                                                     
-                                                                    if rumah_tangga_count <= 1:
-                                                                        print(f"   ✅ Semua pembatalan selesai untuk {customer['name']} - kembali ke Rekap Penjualan")
+                                                                    # PERBAIKAN LOGIKA: Berhenti berdasarkan target tabung yang diinginkan
+                                                                    # Target: Sisa 1 tabung, jadi harus membatalkan (total_tabung - 1) transaksi
+                                                                    target_remaining = 1  # Target sisa 1 tabung
+                                                                    expected_cancellations = int(customer['tabung']) - target_remaining
+                                                                    print(f"   🔍 Debug: Target sisa {target_remaining} tabung, harus membatalkan {expected_cancellations} transaksi")
+                                                                    
+                                                                    if cancellation_count >= expected_cancellations:
+                                                                        print(f"   ✅ Target tercapai! Sudah membatalkan {cancellation_count} transaksi (target: {expected_cancellations})")
+                                                                        print(f"   ✅ Sisa {rumah_tangga_count} transaksi = {rumah_tangga_count} tabung (sesuai target)")
                                                                         # Kembali ke halaman Rekap Penjualan
                                                                         driver.back()
                                                                         time.sleep(2.0)
@@ -767,16 +789,22 @@ def get_customer_list_direct(driver, pin):
                                                                         # Break inner loop to recheck page
                                                                         break
                                                                     else:
-                                                                        print(f"   🔄 Masih ada {rumah_tangga_count} transaksi aktif - lanjutkan pembatalan")
+                                                                        remaining_cancellations = expected_cancellations - cancellation_count
+                                                                        print(f"   🔄 Masih perlu membatalkan {remaining_cancellations} transaksi lagi (sisa {rumah_tangga_count} transaksi)")
                                                                         continue
                                                                         
                                                                 except Exception as count_e:
                                                                     print(f"   ⚠️ Error saat menghitung transaksi aktif: {str(count_e)}")
-                                                                    print(f"   🔄 Menggunakan strategi alternatif - anggap masih ada transaksi untuk dibatalkan")
-                                                                    # Jika error, lanjutkan dengan asumsi masih ada transaksi untuk dibatalkan
-                                                                    # Hanya berhenti jika sudah mencapai max_cancellations
-                                                                    if cancellation_count >= max_cancellations - 1:
-                                                                        print(f"   ⚠️ Mencapai batas maksimal cancellations - kembali ke Rekap Penjualan")
+                                                                    print(f"   🔄 Menggunakan strategi alternatif - cek berdasarkan jumlah pembatalan")
+                                                                    
+                                                                    # STRATEGI ALTERNATIF: Berhenti berdasarkan jumlah pembatalan yang sudah dilakukan
+                                                                    # Target: Sisa 1 tabung, jadi harus membatalkan (total_tabung - 1) transaksi
+                                                                    target_remaining = 1  # Target sisa 1 tabung
+                                                                    expected_cancellations = int(customer['tabung']) - target_remaining
+                                                                    print(f"   🔍 Debug: Expected cancellations untuk {customer['name']}: {expected_cancellations} (target sisa {target_remaining} tabung)")
+                                                                    
+                                                                    if cancellation_count >= expected_cancellations:
+                                                                        print(f"   ✅ Sudah membatalkan {cancellation_count} transaksi (target: {expected_cancellations}) - selesai")
                                                                         driver.back()
                                                                         time.sleep(2.0)
                                                                         driver.back()
@@ -784,7 +812,8 @@ def get_customer_list_direct(driver, pin):
                                                                         processed_customers.append(customer['key'])
                                                                         break
                                                                     else:
-                                                                        print(f"   🔄 Lanjutkan pembatalan berikutnya...")
+                                                                        remaining_cancellations = expected_cancellations - cancellation_count
+                                                                        print(f"   🔄 Masih perlu membatalkan {remaining_cancellations} transaksi lagi")
                                                                         continue
                                                             else:
                                                                 print(f"   ❌ Gagal membatalkan transaksi ke-{cancellation_count + 1} untuk {customer['name']}")
@@ -1124,6 +1153,40 @@ def click_rumah_tangga_transaction(driver, pin, cancelled_positions=None):
                 if "stale element reference" in str(e).lower():
                     print(f"🔄 Stale element detected - refresh elemen dan coba lagi...")
                     return click_rumah_tangga_transaction(driver, pin, cancelled_positions)
+                elif "element click intercepted" in str(e).lower():
+                    print(f"🔄 Element click intercepted - coba strategi alternatif...")
+                    try:
+                        # Strategi alternatif 1: Scroll ke elemen dan gunakan JavaScript click
+                        driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", target_transaction['element'])
+                        time.sleep(2.0)
+                        
+                        # Coba klik dengan JavaScript
+                        driver.execute_script("arguments[0].click();", target_transaction['element'])
+                        print(f"✅ Berhasil klik menggunakan JavaScript")
+                        
+                        # Tunggu dan verifikasi apakah berhasil masuk ke halaman detail
+                        time.sleep(3.0)
+                        current_url = driver.current_url
+                        if 'transactionId=' in current_url:
+                            print(f"✅ Berhasil masuk ke halaman detail transaksi")
+                            return cancel_transaction(driver, pin)
+                        else:
+                            print(f"⚠️ JavaScript click tidak berhasil masuk ke halaman detail")
+                            continue
+                            
+                    except Exception as js_error:
+                        print(f"❌ JavaScript click juga gagal: {str(js_error)}")
+                        
+                        # Strategi alternatif 2: Coba klik parent element
+                        try:
+                            parent_element = target_transaction['element'].find_element(By.XPATH, "./..")
+                            driver.execute_script("arguments[0].click();", parent_element)
+                            print(f"✅ Berhasil klik parent element menggunakan JavaScript")
+                            time.sleep(2.0)
+                            return cancel_transaction(driver, pin)
+                        except Exception as parent_error:
+                            print(f"❌ Parent element click juga gagal: {str(parent_error)}")
+                            continue
                 continue
         
         print(f"❌ Semua transaksi aktif gagal diklik")
@@ -1146,20 +1209,33 @@ def count_active_rumah_tangga_transactions(all_texts):
     """
     rumah_tangga_count = 0
     try:
+        print(f"   🔍 Debug: Menganalisis {len(all_texts)} teks untuk jenis pembelian...")
+        
         for i, text in enumerate(all_texts):
             if text == "Rumah Tangga":
                 is_cancelled = False
-                # Cek dalam range 5 elemen sebelum dan sesudah untuk keyword pembatalan
-                for j in range(max(0, i-5), min(len(all_texts), i+5)):
-                    if "Transaksi Dibatalkan" in all_texts[j] or "Dibatalkan" in all_texts[j]:
+                
+                # Cek dalam range 10 elemen sebelum dan sesudah untuk keyword pembatalan
+                for j in range(max(0, i-10), min(len(all_texts), i+10)):
+                    check_text = all_texts[j].lower()
+                    if any(keyword in check_text for keyword in [
+                        "transaksi dibatalkan", "dibatalkan", "cancel", "batal",
+                        "pembatalan", "sudah dibatalkan", "status dibatalkan"
+                    ]):
                         is_cancelled = True
+                        print(f"   🔍 Debug: Transaksi Rumah Tangga di index {i} DIBATALKAN (keyword: '{all_texts[j]}')")
                         break
+                
                 if not is_cancelled:
                     rumah_tangga_count += 1
+                    print(f"   🔍 Debug: Transaksi Rumah Tangga di index {i} AKTIF")
+        
+        print(f"   🔍 Debug: Total transaksi Rumah Tangga aktif: {rumah_tangga_count}")
+        
     except Exception as e:
         print(f"   ⚠️ Error dalam count_active_rumah_tangga_transactions: {str(e)}")
-        # Jika error, return 0 untuk safety
-        rumah_tangga_count = 0
+        # Jika error, return jumlah yang lebih tinggi untuk safety (agar tidak berhenti prematur)
+        rumah_tangga_count = 2
     
     return rumah_tangga_count
 
