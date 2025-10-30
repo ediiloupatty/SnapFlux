@@ -354,50 +354,7 @@ def run_catat_penjualan(accounts, selected_date=None):
                 
                 # Isi form NIK
                 form_result = fill_nik_form_and_continue(driver, nik_list, nik_index)
-                if form_result == "NO_CEK_PESANAN":
-                    print(f"⚠️ Halaman tidak memiliki tombol CEK PESANAN untuk NIK {nik_list[nik_index]}")
-                    print("🔄 Mencoba kembali ke halaman utama...")
-                    # Coba beberapa cara untuk kembali
-                    try:
-                        # Cara 1: Coba klik tombol kembali browser
-                        print("🔙 Mencoba browser back...")
-                        driver.back()
-                        time.sleep(0.5)
-                        print("✅ Browser back berhasil")
-                    except:
-                        try:
-                            # Cara 2: Coba klik tombol KEMBALI KE HALAMAN UTAMA jika ada
-                            print("🏠 Mencoba klik KEMBALI KE HALAMAN UTAMA...")
-                            click_kembali_ke_halaman_utama(driver)
-                            print("✅ Kembali ke halaman utama berhasil")
-                        except:
-                            try:
-                                # Cara 3: Navigasi langsung ke halaman utama dengan URL
-                                print("🌐 Mencoba navigasi langsung ke halaman utama...")
-                                driver.get("https://subsiditepatlpg.mypertamina.id/merchant-dashboard")
-                                time.sleep(1.0)
-                                print("✅ Navigasi langsung berhasil")
-                            except:
-                                print("⚠️ Semua cara kembali gagal, coba buka Catat Penjualan lagi...")
-                                try:
-                                    click_catat_penjualan_direct(driver)
-                                except:
-                                    pass
-                    
-                    # Setelah kembali, buka lagi Catat Penjualan untuk NIK berikutnya
-                    print("🔄 Membuka Catat Penjualan lagi untuk NIK berikutnya...")
-                    try:
-                        catat_reopen_success = click_catat_penjualan_direct(driver)
-                        if not catat_reopen_success:
-                            print("❌ Gagal membuka Catat Penjualan lagi")
-                            # Coba lanjut ke NIK berikutnya meskipun gagal buka Catat Penjualan
-                    except Exception as e:
-                        print(f"⚠️ Error membuka Catat Penjualan lagi: {str(e)}")
-                    
-                    # Lanjut ke NIK berikutnya
-                    current_index = (current_index + 1) % len(nik_list)
-                    continue
-                elif not form_result:
+                if not form_result:
                     print(f"❌ Gagal mengisi form NIK (index {nik_index}) untuk {username}")
                     rekap['gagal_navigasi'].append((username, f"Gagal isi NIK idx {nik_index}"))
                     # Coba lanjut ke index berikutnya

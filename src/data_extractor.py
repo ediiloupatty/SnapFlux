@@ -493,45 +493,9 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
         print("✅ Berhasil mengisi NIK dan mengklik LANJUTKAN PENJUALAN!")
         time.sleep(0.5)  # Tunggu halaman load
         
-        # Cek apakah halaman memiliki tombol CEK PESANAN
-        print("🔍 Mengecek apakah halaman memiliki tombol CEK PESANAN...")
-        try:
-            # Cari tombol CEK PESANAN dengan selector yang sama seperti di click_cek_pesanan
-            cek_pesanan_selectors = [
-                (By.XPATH, "//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/form[1]/div[4]/div[1]/button[1]"),
-                (By.XPATH, "//button[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'CEK PESANAN')]"),
-                (By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'CEK PESANAN')]"),
-                (By.XPATH, "//button[contains(@class,'button') and contains(., 'CEK')]"),
-                (By.CLASS_NAME, "mantine-Button-root")
-            ]
-            
-            cek_pesanan_found = False
-            for selector_type, selector_value in cek_pesanan_selectors:
-                try:
-                    elements = driver.find_elements(selector_type, selector_value)
-                    for el in elements:
-                        label = (el.text or "").strip().upper()
-                        if "CEK" in label and "PESANAN" in label and el.is_enabled() and el.is_displayed():
-                            cek_pesanan_found = True
-                            print(f"✅ Tombol CEK PESANAN ditemukan: '{el.text.strip()}'")
-                            break
-                    if cek_pesanan_found:
-                        break
-                except Exception:
-                    continue
-            
-            if not cek_pesanan_found:
-                print("❌ Tombol CEK PESANAN tidak ditemukan di halaman ini")
-                print("🔄 Kembali ke halaman utama untuk melanjutkan proses...")
-                return "NO_CEK_PESANAN"  # Return special code untuk indikasi tidak ada CEK PESANAN
-            else:
-                print("✅ Tombol CEK PESANAN tersedia, siap untuk proses selanjutnya")
-                return True
-                
-        except Exception as e:
-            print(f"⚠️ Error mengecek tombol CEK PESANAN: {str(e)}")
-            print("🔄 Asumsi tombol tersedia, lanjut proses...")
-            return True
+        # Langsung return True setelah berhasil mengisi NIK dan klik LANJUTKAN
+        print("✅ Form NIK berhasil diisi dan LANJUTKAN PENJUALAN diklik!")
+        return True
         
     except Exception as e:
         print(f"❌ Error mengisi form NIK: {str(e)}")
