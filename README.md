@@ -22,7 +22,7 @@ SnapFlux is an automated web scraping and data extraction application for the [s
    - Automatic stock data retrieval from dashboard
    - Sales tracking with optional date filtering
    - Excel export with clean pivot format
-2. **Cancel Input** ⭐ NEW in v2
+2. **Cancel Input** ⭐ NEW in v2.0
    - Navigate to Sales Summary
    - Display customer list from the system
    - Support date filtering for specific data search
@@ -193,7 +193,7 @@ pip install -r requirements.txt
 - **Excel Export**: Export results to Excel with clean pivot format
 - **Progress Tracking**: Real-time progress monitoring with detailed logging
 
-### Feature 2: Cancel Input (NEW in v2)
+### Feature 2: Cancel Input (NEW in v2.0)
 
 - **Sales Summary Navigation**: Automatic navigation to Sales Summary page
 - **Customer List Display**: Display customer list from Sales Summary
