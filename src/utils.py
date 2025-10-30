@@ -273,35 +273,8 @@ def run_catat_penjualan(accounts, selected_date=None):
                 continue
             
             print(f"✅ Login berhasil untuk {username}")
-            time.sleep(0.8)  # Delay untuk stabilitas
+            time.sleep(0.5)  # Delay untuk stabilitas
             
-            # === DEBUG SELECTOR SETELAH LOGIN ===
-            try:
-                print("\n🧭 === DEBUG SELECTOR SETELAH LOGIN ===")
-                from selenium.webdriver.common.by import By as _By
-                try:
-                    _el = driver.find_element(_By.XPATH, "//*[contains(text(), 'Catat Penjualan')]")
-                    _text = (_el.text or '').strip()
-                    print(f"✅ Ditemukan 'Catat Penjualan' | Text='{_text}' | Tag={_el.tag_name} | Class='{_el.get_attribute('class')}' | ID='{_el.get_attribute('id')}'")
-                    try:
-                        _xpath = driver.execute_script("""
-                            function absoluteXPath(el){ if(el.id) return '//*[@id="'+el.id+'"]';
-                              const parts=[]; while(el && el.nodeType===1){ let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
-                              parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; } return '//'+parts.join('/'); }
-                            return absoluteXPath(arguments[0]);
-                        """, _el)
-                        _css = driver.execute_script("""
-                            function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
-                            return cssPath(arguments[0]);
-                        """, _el)
-                        print(f"🔗 Suggested XPath [Catat Penjualan]: {_xpath}")
-                        print(f"🔗 Suggested CSS   [Catat Penjualan]: {_css}")
-                    except Exception:
-                        pass
-                except Exception:
-                    print("❌ Elemen 'Catat Penjualan' belum ditemukan saat debug awal")
-            except Exception as _e_dbg:
-                print(f"⚠️ Gagal mencetak debug selector: {str(_e_dbg)}")
 
             # === TAHAP 2: NAVIGASI KE CATAT PENJUALAN ===
             print(f"📝 Navigasi ke Catat Penjualan untuk {username}...")
@@ -330,37 +303,146 @@ def run_catat_penjualan(accounts, selected_date=None):
             
             print(f"✅ Berhasil membaca {len(nik_list)} NIK dari Excel")
             
-            # === TAHAP 4: ISI FORM NIK DAN LANJUTKAN ===
-            print(f"📝 Mengisi form NIK untuk {username}...")
+            # === TAHAP 4-6: LOOP SEMUA NIK (UNIQUE, TANPA LIMIT) ===
+            print(f"📝 Mengisi form NIK untuk {username} (loop semua NIK)...")
             
-            # Gunakan NIK pertama untuk setiap akun (bisa dimodifikasi untuk menggunakan NIK berbeda)
-            nik_index = account_index % len(nik_list)  # Rotasi NIK berdasarkan index akun
+            # === DEBUG SELECTOR PADA CATAT PENJUALAN ===
+            print("\n🧭 === DEBUG SELECTOR PADA CATAT PENJUALAN ===")
+            try:
+                from selenium.webdriver.common.by import By as _By
+                try:
+                    _el = driver.find_element(_By.XPATH, "//*[contains(text(), 'Catat Penjualan')]")
+                    _text = (_el.text or '').strip()
+                    print(f"✅ Ditemukan 'Catat Penjualan' | Text='{_text}' | Tag={_el.tag_name} | Class='{_el.get_attribute('class')}' | ID='{_el.get_attribute('id')}'")
+                    try:
+                        _xpath = driver.execute_script("""
+                            function absoluteXPath(el){ if(el.id) return '//*[@id="'+el.id+'"]';
+                              const parts=[]; while(el && el.nodeType===1){ let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
+                              parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; } return '//'+parts.join('/'); }
+                            return absoluteXPath(arguments[0]);
+                        """, _el)
+                        _css = driver.execute_script("""
+                            function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
+                            return cssPath(arguments[0]);
+                        """, _el)
+                        print(f"🔗 Suggested XPath [Catat Penjualan]: {_xpath}")
+                        print(f"🔗 Suggested CSS   [Catat Penjualan]: {_css}")
+                    except Exception:
+                        pass
+                except Exception:
+                    print("❌ Elemen 'Catat Penjualan' belum ditemukan saat debug")
+            except Exception as _e_dbg:
+                print(f"⚠️ Gagal mencetak debug selector: {str(_e_dbg)}")
             
-            form_success = fill_nik_form_and_continue(driver, nik_list, nik_index)
-            
-            if not form_success:
-                print(f"❌ Gagal mengisi form NIK untuk {username}")
-                rekap['gagal_navigasi'].append((username, "Gagal mengisi form NIK"))
-                continue
+            used_indices = set()
+            start_index = account_index % len(nik_list)
+            current_index = start_index
+            tx_done = 0
             
             from .data_extractor import click_cek_pesanan, click_proses_penjualan
+            from .data_extractor import wait_for_captcha_and_success, click_kembali_ke_halaman_utama
+            from .navigation_handler import click_catat_penjualan_direct as _reopen_catat
             
-            print("🧾 Melanjutkan: klik CEK PESANAN...")
-            if not click_cek_pesanan(driver):
-                print(f"❌ Gagal klik CEK PESANAN untuk {username}")
-                rekap['gagal_navigasi'].append((username, "Gagal klik CEK PESANAN"))
-                continue
+            while len(used_indices) < len(nik_list):
+                # Cari index NIK yang belum dipakai
+                while current_index in used_indices:
+                    current_index = (current_index + 1) % len(nik_list)
+                nik_index = current_index
+                used_indices.add(nik_index)
+                
+                print(f"🧾 Transaksi ke-{tx_done+1} dari {len(nik_list)} | NIK index: {nik_index} | NIK: {nik_list[nik_index]}")
+                
+                # Isi form NIK
+                form_result = fill_nik_form_and_continue(driver, nik_list, nik_index)
+                if form_result == "NO_CEK_PESANAN":
+                    print(f"⚠️ Halaman tidak memiliki tombol CEK PESANAN untuk NIK {nik_list[nik_index]}")
+                    print("🔄 Mencoba kembali ke halaman utama...")
+                    # Coba beberapa cara untuk kembali
+                    try:
+                        # Cara 1: Coba klik tombol kembali browser
+                        print("🔙 Mencoba browser back...")
+                        driver.back()
+                        time.sleep(0.5)
+                        print("✅ Browser back berhasil")
+                    except:
+                        try:
+                            # Cara 2: Coba klik tombol KEMBALI KE HALAMAN UTAMA jika ada
+                            print("🏠 Mencoba klik KEMBALI KE HALAMAN UTAMA...")
+                            click_kembali_ke_halaman_utama(driver)
+                            print("✅ Kembali ke halaman utama berhasil")
+                        except:
+                            try:
+                                # Cara 3: Navigasi langsung ke halaman utama dengan URL
+                                print("🌐 Mencoba navigasi langsung ke halaman utama...")
+                                driver.get("https://subsiditepatlpg.mypertamina.id/merchant-dashboard")
+                                time.sleep(1.0)
+                                print("✅ Navigasi langsung berhasil")
+                            except:
+                                print("⚠️ Semua cara kembali gagal, coba buka Catat Penjualan lagi...")
+                                try:
+                                    click_catat_penjualan_direct(driver)
+                                except:
+                                    pass
+                    
+                    # Setelah kembali, buka lagi Catat Penjualan untuk NIK berikutnya
+                    print("🔄 Membuka Catat Penjualan lagi untuk NIK berikutnya...")
+                    try:
+                        catat_reopen_success = click_catat_penjualan_direct(driver)
+                        if not catat_reopen_success:
+                            print("❌ Gagal membuka Catat Penjualan lagi")
+                            # Coba lanjut ke NIK berikutnya meskipun gagal buka Catat Penjualan
+                    except Exception as e:
+                        print(f"⚠️ Error membuka Catat Penjualan lagi: {str(e)}")
+                    
+                    # Lanjut ke NIK berikutnya
+                    current_index = (current_index + 1) % len(nik_list)
+                    continue
+                elif not form_result:
+                    print(f"❌ Gagal mengisi form NIK (index {nik_index}) untuk {username}")
+                    rekap['gagal_navigasi'].append((username, f"Gagal isi NIK idx {nik_index}"))
+                    # Coba lanjut ke index berikutnya
+                    current_index = (current_index + 1) % len(nik_list)
+                    continue
+                
+                # CEK PESANAN
+                print("🧾 Melanjutkan: klik CEK PESANAN...")
+                if not click_cek_pesanan(driver):
+                    print(f"❌ Gagal klik CEK PESANAN untuk {username}")
+                    rekap['gagal_navigasi'].append((username, "Gagal klik CEK PESANAN"))
+                    current_index = (current_index + 1) % len(nik_list)
+                    continue
+                
+                # PROSES PENJUALAN
+                print("🧾 Di halaman Cek Penjualan: klik PROSES PENJUALAN...")
+                if not click_proses_penjualan(driver):
+                    print(f"❌ Gagal klik PROSES PENJUALAN untuk {username}")
+                    rekap['gagal_navigasi'].append((username, "Gagal klik PROSES PENJUALAN"))
+                    current_index = (current_index + 1) % len(nik_list)
+                    continue
+                
+                # CAPTCHA & SUCCESS
+                print("🧩 Menunggu user menyelesaikan captcha dan halaman sukses...")
+                if not wait_for_captcha_and_success(driver, max_wait_seconds=180):
+                    print(f"❌ Tidak terdeteksi halaman sukses untuk {username} (mungkin captcha belum selesai)")
+                    rekap['gagal_navigasi'].append((username, "Captcha/sukses tidak terdeteksi"))
+                    current_index = (current_index + 1) % len(nik_list)
+                    continue
+                
+                # Kembali ke halaman utama dan buka lagi Catat Penjualan
+                if not click_kembali_ke_halaman_utama(driver):
+                    print(f"⚠️ Tidak dapat kembali ke halaman utama untuk {username}")
+                    break
+                
+                print("🏠 Berhasil kembali ke halaman utama. Membuka Catat Penjualan lagi...")
+                _reopen_catat(driver)
+                
+                tx_done += 1
+                current_index = (current_index + 1) % len(nik_list)
             
-            print("🧾 Di halaman Cek Penjualan: klik PROSES PENJUALAN...")
-            if not click_proses_penjualan(driver):
-                print(f"❌ Gagal klik PROSES PENJUALAN untuk {username}")
-                rekap['gagal_navigasi'].append((username, "Gagal klik PROSES PENJUALAN"))
-                continue
-            
-            print(f"✅ Alur penjualan selesai sampai PROSES PENJUALAN untuk {username}")
+            print(f"✅ Loop transaksi selesai untuk {username}: {tx_done}/{len(nik_list)} transaksi")
             rekap['sukses'].append(username)
             
-            time.sleep(0.8)  # Delay untuk stabilitas
+            time.sleep(0.5)  # Delay untuk stabilitas
             
         except Exception as e:
             print(f"❌ Error dalam proses untuk akun {username}: {str(e)}")

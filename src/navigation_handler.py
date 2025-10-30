@@ -817,7 +817,7 @@ def click_catat_penjualan_direct(driver):
     """
     print("\n📝 === KLIK CATAT PENJUALAN LANGSUNG ===")
     try:
-        time.sleep(1.5)
+        time.sleep(0.5)
         print("🚀 Mengklik Catat Penjualan langsung menggunakan lokasi yang sudah diketahui...")
         try:
             # Direct absolute XPath dari debug run
@@ -854,7 +854,7 @@ def click_catat_penjualan_direct(driver):
                     element.click()
                     print(f"🔍 Debug Catat Penjualan Success: XPath='//*[contains(text(), 'Catat Penjualan')]'")
                     print(f"✅ Berhasil mengklik menu: '{text}'")
-                    time.sleep(0.8)
+                    time.sleep(0.5)
                     print("✅ Navigasi ke Catat Penjualan berhasil!")
                     return True
                 else:
@@ -877,7 +877,7 @@ def click_catat_penjualan_direct(driver):
                         element.click()
                         print(f"🔍 Debug Catat Penjualan Fallback Success: XPath='//*[contains(text(), 'Catat Penjualan')]'")
                         print(f"✅ Berhasil mengklik menu: '{text}'")
-                        time.sleep(0.8)
+                        time.sleep(0.5)
                         print("✅ Navigasi ke Catat Penjualan berhasil!")
                         return True
                     else:

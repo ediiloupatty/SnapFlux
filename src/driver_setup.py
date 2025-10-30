@@ -66,17 +66,17 @@ def setup_driver(headless=False):
         options.add_argument("--disable-field-trial-config")                   # Disable field trials
         options.add_argument("--disable-ipc-flooding-protection")              # Disable IPC protection
         
-        # ========== BLOCK GAMBAR DAN MEDIA ==========
-        # Setting untuk memblokir konten yang tidak diperlukan untuk mempercepat loading
+        # ========== CONTENT SETTINGS ==========
+        # Izinkan gambar & media agar captcha/komponen visual dapat tampil
         prefs = {
-            "profile.managed_default_content_settings.images": 2,  # Block images
+            "profile.managed_default_content_settings.images": 1,  # Allow images
             "profile.default_content_setting_values.notifications": 2,  # Block notifications
-            "profile.managed_default_content_settings.media_stream": 2,  # Block media
-            "profile.managed_default_content_settings.plugins": 2,  # Block plugins
+            "profile.managed_default_content_settings.media_stream": 1,  # Allow media
+            "profile.managed_default_content_settings.plugins": 1,  # Allow plugins
             "profile.managed_default_content_settings.popups": 2,  # Block popups
             "profile.managed_default_content_settings.geolocation": 2,  # Block location
             "profile.managed_default_content_settings.midi_sysex": 2,  # Block MIDI
-            "profile.managed_default_content_settings.protected_media_identifier": 2,  # Block protected media
+            "profile.managed_default_content_settings.protected_media_identifier": 1,  # Allow protected media
             "profile.managed_default_content_settings.automatic_downloads": 2,  # Block downloads
         }
         options.add_experimental_option("prefs", prefs)
@@ -166,7 +166,7 @@ def setup_driver(headless=False):
         driver.implicitly_wait(5)  # Kurangi dari 10 ke 5 detik
         
         print("✅ Chrome WebDriver berhasil di-setup dengan optimasi performa maksimal!")
-        print("🚫 Gambar, JavaScript, dan media telah di-block untuk performa optimal")
+        print("🖼️ Gambar dan media diizinkan agar captcha/komponen visual dapat tampil")
         return driver
         
     except Exception as e:

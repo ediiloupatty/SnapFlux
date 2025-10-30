@@ -368,46 +368,49 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
         
         # Tunggu popup muncul
         print("⏳ Menunggu popup form NIK muncul...")
-        time.sleep(3)
+        time.sleep(1.0)
         
-        # Cari input field NIK
-        nik_input_selectors = [
-            (By.ID, "mantine-r9"),
-            (By.XPATH, "//*[@id='mantine-r9']"),
-            (By.XPATH, "//input[@type='text' and contains(@placeholder, 'NIK')]") ,
-            (By.XPATH, "//input[contains(@placeholder, 'NIK')]") ,
-            (By.XPATH, "//input[@type='text']") ,
-            (By.CLASS_NAME, "mantine-Input-input") ,
-            (By.XPATH, "//input[contains(@class, 'input')]") ,
-            (By.XPATH, "//input[contains(@class, 'form')]")
-        ]
-        
+        # Cari input field NIK dengan direct approach
         nik_input = None
-        for selector_type, selector_value in nik_input_selectors:
+        try:
+            # Coba cari input dengan ID yang berubah-ubah (mantine-rXX)
+            input_elements = driver.find_elements(By.XPATH, "//input[contains(@id, 'mantine-r') and @type='text']")
+            if input_elements:
+                nik_input = input_elements[0]  # Ambil yang pertama
+                print(f"✅ Input field NIK ditemukan dengan ID: {nik_input.get_attribute('id')}")
+            else:
+                # Fallback ke placeholder search
+                nik_input = driver.find_element(By.XPATH, "//input[contains(@placeholder, 'NIK')]")
+                print(f"✅ Input field NIK ditemukan dengan placeholder")
+        except:
+            # Fallback ke class search
             try:
-                nik_input = driver.find_element(selector_type, selector_value)
-                print(f"✅ Input field NIK ditemukan dengan selector: {selector_value}")
-                try:
-                    xpath = driver.execute_script("""
-                        function absoluteXPath(el){
-                          if(el.id) return '//*[@id="'+el.id+'"]';
-                          const parts=[]; while(el && el.nodeType===1){
-                            let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
-                            parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; }
-                          return '//'+parts.join('/'); }
-                        return absoluteXPath(arguments[0]);
-                    """, nik_input)
-                    css = driver.execute_script("""
-                        function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
-                        return cssPath(arguments[0]);
-                    """, nik_input)
-                    print(f"🔗 NIK Input XPath: {xpath}")
-                    print(f"🔗 NIK Input CSS: {css}")
-                except Exception:
-                    pass
-                break
+                nik_input = driver.find_element(By.CLASS_NAME, "mantine-Input-input")
+                print(f"✅ Input field NIK ditemukan dengan class")
             except:
-                continue
+                print("❌ Input field NIK tidak ditemukan dengan semua metode")
+                return False
+        
+        # Debug info (hanya jika berhasil)
+        if nik_input:
+            try:
+                xpath = driver.execute_script("""
+                    function absoluteXPath(el){
+                      if(el.id) return '//*[@id="'+el.id+'"]';
+                      const parts=[]; while(el && el.nodeType===1){
+                        let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
+                        parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; }
+                      return '//'+parts.join('/'); }
+                    return absoluteXPath(arguments[0]);
+                """, nik_input)
+                css = driver.execute_script("""
+                    function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
+                    return cssPath(arguments[0]);
+                """, nik_input)
+                print(f"🔗 NIK Input XPath: {xpath}")
+                print(f"🔗 NIK Input CSS: {css}")
+            except Exception:
+                pass
         
         if not nik_input:
             print("❌ Input field NIK tidak ditemukan")
@@ -421,49 +424,51 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
         # Tunggu sebentar untuk memastikan input terisi
         time.sleep(0.5)
         
-        # Cari tombol "LANJUTKAN PENJUALAN"
-        continue_button_selectors = [
-            (By.XPATH, "//html[1]/body[1]/div[10]/div[1]/div[1]/div[1]/div[2]/section[1]/div[1]/div[1]/form[1]/div[2]/button[1]"),
-            (By.XPATH, "//button[contains(text(), 'LANJUTKAN PENJUALAN')]") ,
-            (By.XPATH, "//button[contains(text(), 'LANJUTKAN')]") ,
-            (By.XPATH, "//button[contains(text(), 'Lanjutkan')]") ,
-            (By.XPATH, "//button[contains(text(), 'lanjutkan')]") ,
-            (By.CLASS_NAME, "mantine-Button-root") ,
-            (By.XPATH, "//button[contains(@class, 'button')]")
-        ]
-        
+        # Cari tombol "LANJUTKAN PENJUALAN" dengan direct approach
         continue_button = None
-        for selector_type, selector_value in continue_button_selectors:
+        try:
+            # Coba cari tombol dengan text "LANJUTKAN PENJUALAN" langsung
+            buttons = driver.find_elements(By.XPATH, "//button[contains(text(), 'LANJUTKAN PENJUALAN')]")
+            if buttons:
+                continue_button = buttons[0]  # Ambil yang pertama
+                print(f"✅ Tombol LANJUTKAN PENJUALAN ditemukan: '{continue_button.text}'")
+            else:
+                # Fallback ke text "LANJUTKAN" saja
+                buttons = driver.find_elements(By.XPATH, "//button[contains(text(), 'LANJUTKAN')]")
+                if buttons:
+                    continue_button = buttons[0]
+                    print(f"✅ Tombol LANJUTKAN ditemukan: '{continue_button.text}'")
+                else:
+                    # Fallback ke class search
+                    buttons = driver.find_elements(By.CLASS_NAME, "mantine-Button-root")
+                    for button in buttons:
+                        if 'LANJUTKAN' in button.text.strip().upper():
+                            continue_button = button
+                            print(f"✅ Tombol LANJUTKAN ditemukan dengan class: '{button.text}'")
+                            break
+        except Exception as e:
+            print(f"⚠️ Error mencari tombol LANJUTKAN: {str(e)}")
+        
+        # Debug info (hanya jika berhasil)
+        if continue_button:
             try:
-                buttons = driver.find_elements(selector_type, selector_value)
-                for button in buttons:
-                    button_text = button.text.strip().upper()
-                    if 'LANJUTKAN' in button_text and 'PENJUALAN' in button_text:
-                        continue_button = button
-                        print(f"✅ Tombol LANJUTKAN PENJUALAN ditemukan: '{button.text}'")
-                        try:
-                            xpath = driver.execute_script("""
-                                function absoluteXPath(el){
-                                  if(el.id) return '//*[@id="'+el.id+'"]';
-                                  const parts=[]; while(el && el.nodeType===1){
-                                    let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
-                                    parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; }
-                                  return '//'+parts.join('/'); }
-                                return absoluteXPath(arguments[0]);
-                            """, continue_button)
-                            css = driver.execute_script("""
-                                function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
-                                return cssPath(arguments[0]);
-                            """, continue_button)
-                            print(f"🔗 CEK LANJUTKAN XPath: {xpath}")
-                            print(f"🔗 CEK LANJUTKAN CSS: {css}")
-                        except Exception:
-                            pass
-                        break
-                if continue_button:
-                    break
-            except:
-                continue
+                xpath = driver.execute_script("""
+                    function absoluteXPath(el){
+                      if(el.id) return '//*[@id="'+el.id+'"]';
+                      const parts=[]; while(el && el.nodeType===1){
+                        let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
+                        parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; }
+                      return '//'+parts.join('/'); }
+                    return absoluteXPath(arguments[0]);
+                """, continue_button)
+                css = driver.execute_script("""
+                    function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
+                    return cssPath(arguments[0]);
+                """, continue_button)
+                print(f"🔗 CEK LANJUTKAN XPath: {xpath}")
+                print(f"🔗 CEK LANJUTKAN CSS: {css}")
+            except Exception:
+                pass
         
         if not continue_button:
             print("❌ Tombol LANJUTKAN PENJUALAN tidak ditemukan")
@@ -471,12 +476,62 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
         
         # Klik tombol LANJUTKAN PENJUALAN
         print("🚀 Mengklik tombol LANJUTKAN PENJUALAN...")
-        continue_button.click()
+        try:
+            # Coba klik normal dulu
+            continue_button.click()
+        except Exception as click_error:
+            print(f"⚠️ Klik normal gagal: {str(click_error)}")
+            print("🔄 Mencoba JavaScript click...")
+            try:
+                # Fallback: JavaScript click
+                driver.execute_script("arguments[0].click();", continue_button)
+                print("✅ JavaScript click berhasil!")
+            except Exception as js_error:
+                print(f"❌ JavaScript click juga gagal: {str(js_error)}")
+                raise js_error
         
         print("✅ Berhasil mengisi NIK dan mengklik LANJUTKAN PENJUALAN!")
-        time.sleep(0.8)  # Tunggu halaman load
+        time.sleep(0.5)  # Tunggu halaman load
         
-        return True
+        # Cek apakah halaman memiliki tombol CEK PESANAN
+        print("🔍 Mengecek apakah halaman memiliki tombol CEK PESANAN...")
+        try:
+            # Cari tombol CEK PESANAN dengan selector yang sama seperti di click_cek_pesanan
+            cek_pesanan_selectors = [
+                (By.XPATH, "//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/form[1]/div[4]/div[1]/button[1]"),
+                (By.XPATH, "//button[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'CEK PESANAN')]"),
+                (By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'CEK PESANAN')]"),
+                (By.XPATH, "//button[contains(@class,'button') and contains(., 'CEK')]"),
+                (By.CLASS_NAME, "mantine-Button-root")
+            ]
+            
+            cek_pesanan_found = False
+            for selector_type, selector_value in cek_pesanan_selectors:
+                try:
+                    elements = driver.find_elements(selector_type, selector_value)
+                    for el in elements:
+                        label = (el.text or "").strip().upper()
+                        if "CEK" in label and "PESANAN" in label and el.is_enabled() and el.is_displayed():
+                            cek_pesanan_found = True
+                            print(f"✅ Tombol CEK PESANAN ditemukan: '{el.text.strip()}'")
+                            break
+                    if cek_pesanan_found:
+                        break
+                except Exception:
+                    continue
+            
+            if not cek_pesanan_found:
+                print("❌ Tombol CEK PESANAN tidak ditemukan di halaman ini")
+                print("🔄 Kembali ke halaman utama untuk melanjutkan proses...")
+                return "NO_CEK_PESANAN"  # Return special code untuk indikasi tidak ada CEK PESANAN
+            else:
+                print("✅ Tombol CEK PESANAN tersedia, siap untuk proses selanjutnya")
+                return True
+                
+        except Exception as e:
+            print(f"⚠️ Error mengecek tombol CEK PESANAN: {str(e)}")
+            print("🔄 Asumsi tombol tersedia, lanjut proses...")
+            return True
         
     except Exception as e:
         print(f"❌ Error mengisi form NIK: {str(e)}")
@@ -494,7 +549,7 @@ def click_cek_pesanan(driver):
     """
     print("\n🧾 === KLIK CEK PESANAN ===")
     try:
-        time.sleep(0.7)
+        time.sleep(0.5)
 
         candidate_selectors = [
             (By.XPATH, "//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/form[1]/div[4]/div[1]/button[1]"),
@@ -542,7 +597,7 @@ def click_cek_pesanan(driver):
             pass
         print(f"✅ Tombol ditemukan: '{target.text.strip()}' — klik...")
         target.click()
-        time.sleep(0.8)
+        time.sleep(0.5)
         print("✅ Berhasil klik CEK PESANAN")
         return True
 
@@ -560,7 +615,7 @@ def click_proses_penjualan(driver):
     """
     print("\n🧾 === KLIK PROSES PENJUALAN ===")
     try:
-        time.sleep(0.7)
+        time.sleep(0.5)
 
         candidate_selectors = [
             (By.XPATH, "//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[4]/div[1]/button[1]"),
@@ -608,11 +663,118 @@ def click_proses_penjualan(driver):
             pass
         print(f"✅ Tombol ditemukan: '{target.text.strip()}' — klik...")
         target.click()
-        time.sleep(0.8)
+        time.sleep(0.5)
         print("✅ Berhasil klik PROSES PENJUALAN")
         return True
 
     except Exception as e:
         print(f"❌ Error klik PROSES PENJUALAN: {str(e)}")
+        return False
+
+
+def wait_for_captcha_and_success(driver, max_wait_seconds=180):
+    """
+    Menunggu user menyelesaikan captcha (slider) lalu mendeteksi halaman sukses transaksi.
+    Strategi:
+    - Tampilkan instruksi di terminal agar user menyelesaikan captcha.
+    - Polling DOM tiap 0.5s untuk indikator sukses seperti 'LUNAS' atau tombol 'KIRIM STRUK KE PELANGGAN'.
+    - Timeout default 180 detik.
+    """
+    print("\n🧩 === MENUNGGU USER SELESAIKAN CAPTCHA ===")
+    try:
+        print("Silakan selesaikan captcha pada popup (geser untuk cocokan gambar).")
+        print("Setelah selesai, sistem akan otomatis mendeteksi halaman sukses.")
+
+        waited = 0.0
+        success_detected = False
+        while waited < max_wait_seconds:
+            try:
+                # Indikator sukses potensial
+                indicators = [
+                    (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'LUNAS')]") ,
+                    (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'KIRIM STRUK KE PELANGGAN')]") ,
+                    (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'INFORMASI TRANSAKSI PELANGGAN')]") ,
+                ]
+                for how, sel in indicators:
+                    els = driver.find_elements(how, sel)
+                    if els:
+                        success_detected = True
+                        break
+                if success_detected:
+                    print("✅ Halaman sukses transaksi terdeteksi (LUNAS / Informasi Transaksi).")
+                    return True
+            except Exception:
+                pass
+
+            time.sleep(0.5)
+            waited += 0.5
+
+        print("❌ Timeout menunggu penyelesaian captcha / halaman sukses tidak terdeteksi.")
+        return False
+
+    except Exception as e:
+        print(f"❌ Error saat menunggu captcha/sukses: {str(e)}")
+        return False
+
+
+def click_kembali_ke_halaman_utama(driver):
+    """
+    Klik tombol 'KEMBALI KE HALAMAN UTAMA' pada halaman sukses transaksi.
+    Menggunakan direct text match dan fallback class.
+    """
+    print("\n🏠 === KLIK KEMBALI KE HALAMAN UTAMA ===")
+    try:
+        time.sleep(0.5)
+
+        candidates = [
+            (By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'KEMBALI KE HALAMAN UTAMA')]") ,
+            (By.XPATH, "//button[contains(@class,'button') and contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'KEMBALI')]") ,
+            (By.CLASS_NAME, "mantine-Button-root")
+        ]
+
+        target = None
+        for how, sel in candidates:
+            try:
+                els = driver.find_elements(how, sel)
+                for el in els:
+                    txt = (el.text or '').strip().upper()
+                    if 'KEMBALI' in txt and 'HALAMAN' in txt:
+                        if el.is_displayed() and el.is_enabled():
+                            target = el
+                            break
+                if target:
+                    break
+            except Exception:
+                continue
+
+        if not target:
+            print("❌ Tombol 'KEMBALI KE HALAMAN UTAMA' tidak ditemukan")
+            return False
+
+        # Cetak selector bantu
+        try:
+            xpath = driver.execute_script("""
+                function absoluteXPath(el){ if(el.id) return '//*[@id="'+el.id+'"]';
+                  const parts=[]; while(el && el.nodeType===1){ let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
+                  parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; } return '//'+parts.join('/'); }
+                return absoluteXPath(arguments[0]);
+            """, target)
+            css = driver.execute_script("""
+                function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
+                return cssPath(arguments[0]);
+            """, target)
+            print(f"🔗 KEMBALI XPath: {xpath}")
+            print(f"🔗 KEMBALI CSS: {css}")
+        except Exception:
+            pass
+
+        print("🚀 Klik 'KEMBALI KE HALAMAN UTAMA'...")
+        target.click()
+        time.sleep(0.5)
+        print("✅ Berhasil kembali ke halaman utama")
+        return True
+
+    except Exception as e:
+        print(f"❌ Error klik kembali ke halaman utama: {str(e)}")
         return False
 
