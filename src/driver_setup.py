@@ -78,6 +78,12 @@ def setup_driver(headless=False):
             "profile.managed_default_content_settings.midi_sysex": 2,  # Block MIDI
             "profile.managed_default_content_settings.protected_media_identifier": 1,  # Allow protected media
             "profile.managed_default_content_settings.automatic_downloads": 2,  # Block downloads
+            # Disable password save prompts & password manager
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False,
+            # Reduce autofill noise
+            "autofill.profile_enabled": False,
+            "autofill.credit_card_enabled": False,
         }
         options.add_experimental_option("prefs", prefs)
         

@@ -221,17 +221,15 @@ def run_catat_penjualan(accounts, selected_date=None):
     else:
         print(f"📅 Mode: TANPA filter tanggal spesifik")
     
-    # Check headless mode configuration
+    # Untuk Catat Penjualan, paksa GUI (headless False) agar captcha & UI interaktif
     try:
         from .config_manager import config_manager
-        headless_mode = config_manager.get('headless_mode', True)
+        config_manager.config['headless_mode'] = False
+        headless_mode = False
     except ImportError:
-        headless_mode = True  # Default fallback
+        headless_mode = False
     
-    if headless_mode:
-        print("🌐 Browser akan berjalan dalam mode headless")
-    else:
-        print("🖥️ Browser akan berjalan dengan GUI visible")
+    print("🖥️ Browser akan berjalan dengan GUI visible (dipaksa untuk Catat Penjualan)")
     
     # Inisialisasi tracking
     total_start = time.time()
