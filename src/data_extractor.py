@@ -492,8 +492,104 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
         
         print("✅ Berhasil mengisi NIK dan mengklik LANJUTKAN PENJUALAN!")
         time.sleep(0.5)  # Tunggu halaman load
-        
-        # Langsung return True setelah berhasil mengisi NIK dan klik LANJUTKAN
+
+        # 1) Jika ada popup dengan tombol "TUTUP", klik dan kembali ke awal (reopen Catat Penjualan)
+        try:
+            tutup_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]")
+            for btn in tutup_buttons:
+                label = (btn.text or '').strip().upper()
+                if 'TUTUP' in label and btn.is_displayed() and btn.is_enabled():
+                    print("🪟 Popup terdeteksi — klik 'TUTUP'...")
+                    # Debug selector untuk tombol TUTUP
+                    try:
+                        xpath = driver.execute_script("""
+                            function absoluteXPath(el){ if(el.id) return '//*[@id="'+el.id+'"]';
+                              const parts=[]; while(el && el.nodeType===1){ let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
+                              parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; } return '//'+parts.join('/'); }
+                            return absoluteXPath(arguments[0]);
+                        """, btn)
+                        css = driver.execute_script("""
+                            function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
+                            return cssPath(arguments[0]);
+                        """, btn)
+                        print(f"🔗 TUTUP XPath: {xpath}")
+                        print(f"🔗 TUTUP CSS: {css}")
+                    except Exception:
+                        pass
+                    try:
+                        btn.click()
+                    except Exception:
+                        driver.execute_script("arguments[0].click();", btn)
+                    time.sleep(0.5)
+                    # Reopen Catat Penjualan agar flow kembali ke kondisi awal
+                    try:
+                        from .navigation_handler import click_catat_penjualan_direct as _reopen_catat
+                        print("🔄 Reopen 'Catat Penjualan' setelah menutup popup...")
+                        _reopen_catat(driver)
+                    except Exception as e_ro:
+                        print(f"⚠️ Gagal reopen 'Catat Penjualan' setelah TUTUP: {str(e_ro)}")
+                    # Kembalikan kode khusus agar loop memakai NIK berikutnya tanpa menandai gagal
+                    return "REOPENED_AFTER_TUTUP"
+        except Exception:
+            pass
+
+        # 2) Jika muncul peringatan: "Tidak dapat transaksi karena telah melebihi batas kewajaran ..."
+        #    maka klik "Ganti Pelanggan" lalu kembalikan False agar loop memakai NIK berikutnya
+        try:
+            warning_found = False
+            warning_selectors = [
+                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TIDAK DAPAT TRANSAKSI')]") ,
+                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'MELEBIHI BATAS KEWAJARAN')]")
+            ]
+            for how, sel in warning_selectors:
+                if driver.find_elements(how, sel):
+                    warning_found = True
+                    break
+
+            if warning_found:
+                print("⚠️ Deteksi peringatan batas kewajaran — akan klik 'Ganti Pelanggan' dan lanjut ke NIK berikutnya")
+                try:
+                    ganti_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'GANTI PELANGGAN')]")
+                    target_ganti = None
+                    for gb in ganti_buttons:
+                        lbl = (gb.text or '').strip().upper()
+                        if 'GANTI' in lbl and 'PELANGGAN' in lbl and gb.is_displayed() and gb.is_enabled():
+                            target_ganti = gb
+                            break
+                    if target_ganti:
+                        # Debug selector untuk tombol Ganti Pelanggan
+                        try:
+                            xpath = driver.execute_script("""
+                                function absoluteXPath(el){ if(el.id) return '//*[@id="'+el.id+'"]';
+                                  const parts=[]; while(el && el.nodeType===1){ let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
+                                  parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; } return '//'+parts.join('/'); }
+                                return absoluteXPath(arguments[0]);
+                            """, target_ganti)
+                            css = driver.execute_script("""
+                                function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
+                                return cssPath(arguments[0]);
+                            """, target_ganti)
+                            print(f"🔗 GANTI PELANGGAN XPath: {xpath}")
+                            print(f"🔗 GANTI PELANGGAN CSS: {css}")
+                        except Exception:
+                            pass
+                        try:
+                            target_ganti.click()
+                        except Exception:
+                            driver.execute_script("arguments[0].click();", target_ganti)
+                        time.sleep(0.5)
+                        print("✅ 'Ganti Pelanggan' diklik — kembalikan kontrol agar gunakan NIK berikutnya")
+                    else:
+                        print("❌ Tombol 'Ganti Pelanggan' tidak ditemukan")
+                except Exception as e_gp:
+                    print(f"❌ Error saat mencoba klik 'Ganti Pelanggan': {str(e_gp)}")
+
+                # Kembalikan kode khusus agar loop lanjut ke NIK berikutnya tanpa tandai gagal
+                return "RETRY_NEXT_NIK"
+        except Exception:
+            pass
+
+        # Jika tidak ada kondisi khusus, lanjut ke proses berikutnya (CEK PESANAN)
         print("✅ Form NIK berhasil diisi dan LANJUTKAN PENJUALAN diklik!")
         return True
         

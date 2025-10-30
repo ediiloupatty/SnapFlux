@@ -334,8 +334,17 @@ def run_catat_penjualan(accounts, selected_date=None):
             except Exception as _e_dbg:
                 print(f"⚠️ Gagal mencetak debug selector: {str(_e_dbg)}")
             
+            # Persistent pointer start (per username)
+            try:
+                from .state_manager import get_next_index, advance_next_index
+                start_index = get_next_index(username, len(nik_list))
+                print(f"🧭 Start index persisten untuk {username}: {start_index}")
+            except Exception:
+                start_index = account_index % len(nik_list)
+                advance_next_index = None
+                print(f"🧭 Start index fallback untuk {username}: {start_index}")
+
             used_indices = set()
-            start_index = account_index % len(nik_list)
             current_index = start_index
             tx_done = 0
             
@@ -354,10 +363,19 @@ def run_catat_penjualan(accounts, selected_date=None):
                 
                 # Isi form NIK
                 form_result = fill_nik_form_and_continue(driver, nik_list, nik_index)
+                # Advance persistent pointer after each attempt
+                try:
+                    if advance_next_index:
+                        advance_next_index(username, len(nik_list), 1)
+                except Exception:
+                    pass
+                if form_result in ("RETRY_NEXT_NIK", "REOPENED_AFTER_TUTUP"):
+                    # Kasus tertangani (popup TUTUP / batas kewajaran + Ganti Pelanggan) — jangan tandai gagal
+                    current_index = (current_index + 1) % len(nik_list)
+                    continue
                 if not form_result:
                     print(f"❌ Gagal mengisi form NIK (index {nik_index}) untuk {username}")
                     rekap['gagal_navigasi'].append((username, f"Gagal isi NIK idx {nik_index}"))
-                    # Coba lanjut ke index berikutnya
                     current_index = (current_index + 1) % len(nik_list)
                     continue
                 
