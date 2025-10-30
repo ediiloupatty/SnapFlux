@@ -820,48 +820,35 @@ def click_catat_penjualan_direct(driver):
         time.sleep(0.5)
         print("🚀 Mengklik Catat Penjualan langsung menggunakan lokasi yang sudah diketahui...")
         try:
-            # Direct absolute XPath dari debug run
+            # Direct absolute XPath hasil debug — optimasi kecepatan, coba sekali dan klik
             direct_xpath = "//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[1]"
+            element = driver.find_element(By.XPATH, direct_xpath)
+            print(f"✅ Menu Catat Penjualan ditemukan langsung via direct XPath (tanpa validasi manual)")
+            print(f"🔍 Debug Catat Penjualan: Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Loc={element.location}, Size={element.size}")
             try:
-                element = driver.find_element(By.XPATH, direct_xpath)
+                xpath = driver.execute_script("""
+                    function absoluteXPath(el){ if(el.id) return '//*[@id="'+el.id+'"]';
+                        const parts=[]; while(el && el.nodeType===1){ let ix=0, sib=el.previousSibling; while(sib){ if (sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
+                        parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; }
+                        return '//'+parts.join('/'); }
+                    return absoluteXPath(arguments[0]);
+                """, element)
+                css = driver.execute_script("""
+                    function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
+                    return cssPath(arguments[0]);
+                """, element)
+                print(f"🔗 Suggested XPath: {xpath}")
+                print(f"🔗 Suggested CSS: {css}")
             except Exception:
-                element = driver.find_element(By.XPATH, "//*[contains(text(), 'Catat Penjualan')]")
-            text = element.text.strip()
-            if text and 'catat' in text.lower() and 'penjualan' in text.lower():
-                print(f"✅ Menu Catat Penjualan ditemukan langsung!")
-                print(f"📝 Text: '{text}'")
-                print(f"🔍 Debug Catat Penjualan 1: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
-                try:
-                    # Cetak selector langsung yang bisa dipakai nanti
-                    xpath = driver.execute_script("""
-                        function absoluteXPath(el){
-                          if(el.id) return '//*[@id="'+el.id+'"]';
-                          const parts=[]; while(el && el.nodeType===1){
-                            let ix=0, sib=el.previousSibling; while(sib){ if (sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
-                            parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; }
-                          return '//'+parts.join('/'); }
-                        return absoluteXPath(arguments[0]);
-                    """, element)
-                    css = driver.execute_script("""
-                        function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
-                        return cssPath(arguments[0]);
-                    """, element)
-                    print(f"🔗 Suggested XPath: {xpath}")
-                    print(f"🔗 Suggested CSS: {css}")
-                except Exception:
-                    pass
-                if element.is_displayed() and element.is_enabled():
-                    element.click()
-                    print(f"🔍 Debug Catat Penjualan Success: XPath='//*[contains(text(), 'Catat Penjualan')]'")
-                    print(f"✅ Berhasil mengklik menu: '{text}'")
-                    time.sleep(0.5)
-                    print("✅ Navigasi ke Catat Penjualan berhasil!")
-                    return True
-                else:
-                    print("❌ Menu tidak dapat diklik")
-                    return False
+                pass
+            if element.is_displayed() and element.is_enabled():
+                element.click()
+                print(f"✅ Berhasil direct klik Catat Penjualan!")
+                time.sleep(0.5)
+                print("✅ Navigasi ke Catat Penjualan berhasil!")
+                return True
             else:
-                print("❌ Elemen tidak mengandung 'Catat Penjualan'")
+                print("❌ Element Catat Penjualan ditemukan tapi tidak dapat diklik (hidden/disabled)")
                 return False
         except Exception as e:
             print(f"⚠️ Error dengan XPath selector: {str(e)}")
