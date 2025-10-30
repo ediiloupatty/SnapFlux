@@ -161,20 +161,21 @@ def get_main_menu_input():
     """Menu utama untuk memilih fitur program"""
     while True:
         try:
-            print("\n🎯 === MENU UTAMA SNAPFLUX ====")
+            print("\n🎯 === MENU UTAMA SNAPFLUX V2.0 ====")
             print("Silakan pilih fitur yang ingin digunakan:")
             print("1. Check Stok")
             print("2. Batalkan Inputan")
+            print("3. Catat Penjualan")
             print("(Otomatis pilih 1 jika tidak ada input dalam 15 detik)")
             
-            menu_input = input_with_timeout("Pilihan Anda (1/2): ", 15).strip()
+            menu_input = input_with_timeout("Pilihan Anda (1/2/3): ", 15).strip()
             
             if not menu_input:
                 print("⏭️ User tidak input menu - akan menggunakan Check Stok (default)")
                 return 1
             
-            if menu_input not in ['1', '2']:
-                print("❌ Pilihan tidak valid! Silakan masukkan 1 atau 2")
+            if menu_input not in ['1', '2', '3']:
+                print("❌ Pilihan tidak valid! Silakan masukkan 1, 2, atau 3")
                 continue
             
             choice = int(menu_input)
@@ -184,12 +185,319 @@ def get_main_menu_input():
                 return 1
             elif choice == 2:
                 print("✅ Dipilih: Batalkan Inputan")
-                print("🚧 Fitur ini akan segera tersedia!")
                 return 2
+            elif choice == 3:
+                print("✅ Dipilih: Catat Penjualan")
+                return 3
                 
         except Exception as e:
             print(f"❌ Error input menu: {str(e)}")
             continue
+
+def run_catat_penjualan(accounts, selected_date=None):
+    """
+    ============================================
+    FUNGSI CATAT PENJUALAN - PHASE 1
+    ============================================
+    
+    Fungsi untuk menjalankan fitur Catat Penjualan yang melakukan:
+    1. Login otomatis ke setiap akun merchant
+    2. Navigasi ke menu "Catat Penjualan" (bukan Laporan Penjualan)
+    3. Mengambil data penjualan untuk dicatat
+    4. Menampilkan hasil di terminal
+    
+    Args:
+        accounts (list): List akun merchant (nama, username, pin)
+        selected_date (datetime): Tanggal yang dipilih user untuk filter (optional)
+    
+    Returns:
+        None: Menampilkan hasil langsung di terminal
+    """
+    print(f"\n🚀 Memulai proses Catat Penjualan...")
+    
+    # Tampilkan informasi mode operasi
+    if selected_date:
+        print(f"📅 Mode: Dengan filter tanggal {selected_date.strftime('%d %B %Y')}")
+    else:
+        print(f"📅 Mode: TANPA filter tanggal spesifik")
+    
+    # Check headless mode configuration
+    try:
+        from .config_manager import config_manager
+        headless_mode = config_manager.get('headless_mode', True)
+    except ImportError:
+        headless_mode = True  # Default fallback
+    
+    if headless_mode:
+        print("🌐 Browser akan berjalan dalam mode headless")
+    else:
+        print("🖥️ Browser akan berjalan dengan GUI visible")
+    
+    # Inisialisasi tracking
+    total_start = time.time()
+    rekap = {
+        'sukses': [],
+        'gagal_login': [],
+        'gagal_navigasi': [],
+        'gagal_waktu': [],
+        'gagal_masuk_akun': [],
+        'gagal_masuk_akun_count': 0
+    }
+    
+    # Loop pemrosesan setiap akun
+    for account_index, (nama, username, pin) in enumerate(accounts):
+        print(f"\n{'='*60}")
+        print(f"🔄 Memproses akun: {username} ({nama})")
+        print(f"{'='*60}")
+        
+        akun_start = time.time()
+        driver = None
+        
+        try:
+            # === TAHAP 1: LOGIN ===
+            print(f"🔐 Login untuk akun {username}...")
+            from .login_handler import login_direct
+            login_result = login_direct(username, pin)
+            driver = login_result[0]
+            login_info = login_result[1]
+            
+            # Track gagal masuk akun
+            if login_info['gagal_masuk_akun']:
+                rekap['gagal_masuk_akun'].append((username, f"Gagal Masuk Akun (retry berhasil)"))
+                rekap['gagal_masuk_akun_count'] += login_info['count']
+                print(f"📊 Gagal Masuk Akun terdeteksi untuk {username}")
+            
+            if not driver:
+                print(f"❌ Login gagal untuk akun {username}")
+                rekap['gagal_login'].append((username, "Login gagal"))
+                continue
+            
+            print(f"✅ Login berhasil untuk {username}")
+            time.sleep(0.8)  # Delay untuk stabilitas
+            
+            # === DEBUG SELECTOR SETELAH LOGIN ===
+            try:
+                print("\n🧭 === DEBUG SELECTOR SETELAH LOGIN ===")
+                from selenium.webdriver.common.by import By as _By
+                try:
+                    _el = driver.find_element(_By.XPATH, "//*[contains(text(), 'Catat Penjualan')]")
+                    _text = (_el.text or '').strip()
+                    print(f"✅ Ditemukan 'Catat Penjualan' | Text='{_text}' | Tag={_el.tag_name} | Class='{_el.get_attribute('class')}' | ID='{_el.get_attribute('id')}'")
+                    try:
+                        _xpath = driver.execute_script("""
+                            function absoluteXPath(el){ if(el.id) return '//*[@id="'+el.id+'"]';
+                              const parts=[]; while(el && el.nodeType===1){ let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
+                              parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; } return '//'+parts.join('/'); }
+                            return absoluteXPath(arguments[0]);
+                        """, _el)
+                        _css = driver.execute_script("""
+                            function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
+                            return cssPath(arguments[0]);
+                        """, _el)
+                        print(f"🔗 Suggested XPath [Catat Penjualan]: {_xpath}")
+                        print(f"🔗 Suggested CSS   [Catat Penjualan]: {_css}")
+                    except Exception:
+                        pass
+                except Exception:
+                    print("❌ Elemen 'Catat Penjualan' belum ditemukan saat debug awal")
+            except Exception as _e_dbg:
+                print(f"⚠️ Gagal mencetak debug selector: {str(_e_dbg)}")
+
+            # === TAHAP 2: NAVIGASI KE CATAT PENJUALAN ===
+            print(f"📝 Navigasi ke Catat Penjualan untuk {username}...")
+            
+            # Import fungsi navigasi
+            from .navigation_handler import click_catat_penjualan_direct
+            catat_success = click_catat_penjualan_direct(driver)
+            
+            if not catat_success:
+                print(f"❌ Gagal navigasi ke Catat Penjualan untuk {username}")
+                rekap['gagal_navigasi'].append((username, "Gagal navigasi ke Catat Penjualan"))
+                continue
+            
+            print("✅ Berhasil navigasi ke Catat Penjualan!")
+            
+            # === TAHAP 3: BACA NIK DAN ISI FORM ===
+            print(f"📋 Membaca daftar NIK dari Excel...")
+            
+            from .data_extractor import read_nik_from_excel, fill_nik_form_and_continue
+            nik_list = read_nik_from_excel()
+            
+            if not nik_list:
+                print(f"❌ Gagal membaca NIK dari Excel untuk {username}")
+                rekap['gagal_navigasi'].append((username, "Gagal membaca NIK dari Excel"))
+                continue
+            
+            print(f"✅ Berhasil membaca {len(nik_list)} NIK dari Excel")
+            
+            # === TAHAP 4: ISI FORM NIK DAN LANJUTKAN ===
+            print(f"📝 Mengisi form NIK untuk {username}...")
+            
+            # Gunakan NIK pertama untuk setiap akun (bisa dimodifikasi untuk menggunakan NIK berbeda)
+            nik_index = account_index % len(nik_list)  # Rotasi NIK berdasarkan index akun
+            
+            form_success = fill_nik_form_and_continue(driver, nik_list, nik_index)
+            
+            if not form_success:
+                print(f"❌ Gagal mengisi form NIK untuk {username}")
+                rekap['gagal_navigasi'].append((username, "Gagal mengisi form NIK"))
+                continue
+            
+            from .data_extractor import click_cek_pesanan, click_proses_penjualan
+            
+            print("🧾 Melanjutkan: klik CEK PESANAN...")
+            if not click_cek_pesanan(driver):
+                print(f"❌ Gagal klik CEK PESANAN untuk {username}")
+                rekap['gagal_navigasi'].append((username, "Gagal klik CEK PESANAN"))
+                continue
+            
+            print("🧾 Di halaman Cek Penjualan: klik PROSES PENJUALAN...")
+            if not click_proses_penjualan(driver):
+                print(f"❌ Gagal klik PROSES PENJUALAN untuk {username}")
+                rekap['gagal_navigasi'].append((username, "Gagal klik PROSES PENJUALAN"))
+                continue
+            
+            print(f"✅ Alur penjualan selesai sampai PROSES PENJUALAN untuk {username}")
+            rekap['sukses'].append(username)
+            
+            time.sleep(0.8)  # Delay untuk stabilitas
+            
+        except Exception as e:
+            print(f"❌ Error dalam proses untuk akun {username}: {str(e)}")
+            import logging
+            logger = logging.getLogger('automation')
+            logger.error(f"Error untuk akun {username}: {str(e)}", exc_info=True)
+            rekap['gagal_navigasi'].append((username, f"Error: {str(e)}"))
+        
+        finally:
+            # Cleanup driver
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+        
+        akun_end = time.time()
+        akun_duration = akun_end - akun_start
+        print(f"⏱️ Waktu proses akun {username}: {akun_duration:.2f} detik")
+        
+        # Track timeout jika proses terlalu lama (>60 detik)
+        if akun_duration > 60:
+            rekap['gagal_waktu'].append((username, f"Timeout - proses terlalu lama ({akun_duration:.1f} detik)"))
+            print(f"⚠️ Timeout terdeteksi untuk {username}: {akun_duration:.1f} detik")
+        
+        # Delay antar akun untuk menghindari rate limiting
+        if account_index < len(accounts) - 1:
+            print("⏳ Menunggu sebentar untuk menghindari rate limiting...")
+            if (account_index + 1) % 5 == 0:
+                print("🚨 Delay ekstra setiap 5 akun...")
+                time.sleep(8.0)
+            else:
+                time.sleep(4.0)
+    
+    # === REKAP AKHIR CATAT PENJUALAN ===
+    total_end = time.time()
+    total_duration = total_end - total_start
+    
+    print(f"\n{'='*60}")
+    print(f"📊 === REKAP AKHIR CATAT PENJUALAN ===")
+    print(f"{'='*60}")
+    print(f"⏱️ Total waktu proses: {total_duration:.2f} detik")
+    print(f"📈 Total akun diproses: {len(accounts)}")
+    print(f"✅ Berhasil: {len(rekap['sukses'])} akun")
+    print(f"❌ Gagal Login: {len(rekap['gagal_login'])} akun")
+    print(f"❌ Gagal Navigasi: {len(rekap['gagal_navigasi'])} akun")
+    print(f"❌ Timeout: {len(rekap['gagal_waktu'])} akun")
+    print(f"🔄 Gagal Masuk Akun (retry): {len(rekap['gagal_masuk_akun'])} akun")
+    
+    if rekap['sukses']:
+        print(f"\n✅ Akun yang berhasil:")
+        for username in rekap['sukses']:
+            print(f"   - {username}")
+    
+    if rekap['gagal_login']:
+        print(f"\n❌ Akun yang gagal login:")
+        for username, reason in rekap['gagal_login']:
+            print(f"   - {username}: {reason}")
+    
+    if rekap['gagal_navigasi']:
+        print(f"\n❌ Akun yang gagal navigasi:")
+        for username, reason in rekap['gagal_navigasi']:
+            print(f"   - {username}: {reason}")
+    
+    if rekap['gagal_waktu']:
+        print(f"\n⚠️ Akun yang timeout:")
+        for username, reason in rekap['gagal_waktu']:
+            print(f"   - {username}: {reason}")
+    
+    if rekap['gagal_masuk_akun']:
+        print(f"\n🔄 Akun dengan retry berhasil:")
+        for username, reason in rekap['gagal_masuk_akun']:
+            print(f"   - {username}: {reason}")
+    
+    print(f"\n🎉 Proses Catat Penjualan selesai!")
+    print(f"👋 Terima kasih!")
+
+def run_catat_penjualan_coming_soon():
+    """
+    ============================================
+    FUNGSI CATAT PENJUALAN - COMING SOON (FALLBACK)
+    ============================================
+    
+    Fungsi fallback jika fitur Catat Penjualan belum siap.
+    """
+    print("\n" + "="*60)
+    print("🚀 === FITUR CATAT PENJUALAN - COMING SOON ===")
+    print("="*60)
+    
+    print("\n📝 FITUR YANG AKAN TERSEDIA:")
+    print("┌─────────────────────────────────────────────────────────┐")
+    print("│ 1. 📊 Input Data Penjualan Manual                      │")
+    print("│ 2. 📋 Form Input Penjualan Harian                      │")
+    print("│ 3. 🔄 Sync Data dengan Sistem Pertamina                │")
+    print("│ 4. 📈 Dashboard Penjualan Real-time                    │")
+    print("│ 5. 📱 Mobile-friendly Interface                        │")
+    print("│ 6. 🔔 Notifikasi Penjualan                             │")
+    print("│ 7. 📊 Laporan Penjualan Otomatis                       │")
+    print("│ 8. 💾 Backup Data Penjualan                            │")
+    print("└─────────────────────────────────────────────────────────┘")
+    
+    print("\n🎯 MANFAAT FITUR CATAT PENJUALAN:")
+    print("✅ Mencatat penjualan secara manual dan otomatis")
+    print("✅ Monitoring penjualan real-time")
+    print("✅ Integrasi dengan sistem Pertamina")
+    print("✅ Laporan penjualan yang komprehensif")
+    print("✅ Notifikasi untuk penjualan penting")
+    print("✅ Backup data penjualan otomatis")
+    
+    print("\n⏰ TIMELINE PENGEMBANGAN:")
+    print("📅 Phase 1: Form Input Manual (2 minggu)")
+    print("📅 Phase 2: Dashboard Real-time (3 minggu)")
+    print("📅 Phase 3: Mobile Interface (2 minggu)")
+    print("📅 Phase 4: Integration & Testing (2 minggu)")
+    print("📅 Phase 5: Release v2.1 (1 minggu)")
+    
+    print("\n🔔 NOTIFIKASI UPDATE:")
+    print("📧 Email: admin@snapflux.com")
+    print("📱 WhatsApp: +62-xxx-xxx-xxxx")
+    print("🌐 Website: https://snapflux.com/updates")
+    
+    print("\n💡 FITUR SEMENTARA:")
+    print("🔧 Gunakan fitur 'Check Stok' untuk monitoring penjualan")
+    print("📊 Data tersimpan di folder 'results'")
+    print("📋 Export data ke Excel untuk analisis")
+    
+    print("\n🎉 TERIMA KASIH!")
+    print("Kami sedang bekerja keras untuk menghadirkan fitur terbaik")
+    print("untuk kemudahan operasional bisnis Anda.")
+    
+    print("\n" + "="*60)
+    print("🚀 Snapflux v2.0 - Coming Soon Features")
+    print("="*60)
+    
+    # Tampilkan menu kembali
+    print("\n🔄 Kembali ke menu utama...")
+    input("Tekan Enter untuk kembali ke menu utama...")
 
 def get_date_input():
     """Minta input tanggal dari user dengan validasi"""

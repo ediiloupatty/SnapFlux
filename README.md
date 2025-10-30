@@ -27,12 +27,24 @@ SnapFlux is an automated web scraping and data extraction application for the [s
    - Display customer list from the system
    - Support date filtering for specific data search
    - Transaction cancellation workflow for duplicate entries
+3. **Catat Penjualan** ⭐ NEW in v2.0
+   - Auto-login → direct navigate to `Catat Penjualan`
+   - Auto-fill NIK from `akun/NIK.xlsx` (≈4,7k rows)
+   - Click flow: `LANJUTKAN PENJUALAN` → `CEK PESANAN` → `PROSES PENJUALAN`
+   - Uses direct selectors (absolute XPath/ID) for fast, reliable clicks
+   - Built-in selector debugging prints Suggested XPath/CSS to terminal
 
 ### 🆕 Enhanced Enterprise Features (v2.0)
 
 - **Environment Configuration Management** - Configuration via environment variables (optional YAML)
 - **Streamlined Codebase** - Removed unused modules for better performance and maintainability
 - **Direct Selector Optimization** - Hardcoded selectors for faster element detection
+  - Examples used in Catat Penjualan:
+    - Menu Catat Penjualan: `//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[1]`
+    - Input NIK (ID): `mantine-r9`
+    - Lanjutkan Penjualan: `//html[1]/body[1]/div[10]/div[1]/div[1]/div[1]/div[2]/section[1]/div[1]/div[1]/form[1]/div[2]/button[1]`
+    - Cek Pesanan: `//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/form[1]/div[4]/div[1]/button[1]`
+    - Proses Penjualan: `//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[4]/div[1]/button[1]`
 - **Advanced Logging** - Structured logging with rotating file handler
 - **Comprehensive Error Handling** - Robust error handling with retry mechanisms
 
@@ -76,6 +88,10 @@ cp config.yaml.example config.yaml
 python main.py
 ```
 
+During Catat Penjualan, the app prints Suggested XPath/CSS for key elements to help future maintenance.
+
+> Note: Catat Penjualan does not require date filtering.
+
 ## ⚙️ Configuration
 
 ### Environment Variables (.env)
@@ -104,6 +120,10 @@ Edit `akun/akun.xlsx` with:
 - Pangkalan name (Merchant name)
 - Username (email/phone)
 - PIN credentials
+
+### NIK Data (Catat Penjualan)
+
+Place NIK list in `akun/NIK.xlsx` with a single column `NIK` (row 1 header; data starts row 2). The app will rotate NIKs across accounts and auto-fill into the popup form.
 
 ### Advanced Configuration (Optional)
 
@@ -197,9 +217,10 @@ pip install -r requirements.txt
 
 ### Major Features Added
 
-1. **🆕 Cancel Input Feature** - New feature for Sales Summary navigation and customer list display (not available in v1)
-2. **🚀 Performance Optimization** - Streamlined codebase with removed unused modules
-3. **⚡ Direct Selector Implementation** - Hardcoded selectors for faster element detection
+1. **🆕 Catat Penjualan** - Full flow: navigate → fill NIK from Excel → CEK PESANAN → PROSES PENJUALAN
+2. **🆕 Cancel Input Feature** - Sales Summary navigation and customer list display (not available in v1)
+3. **🚀 Performance Optimization** - Streamlined codebase with removed unused modules
+4. **⚡ Direct Selector Implementation** - Hardcoded selectors for faster element detection
 
 ### Enterprise-Grade Improvements
 
@@ -246,6 +267,19 @@ All enhancement features are **optional** and do not change existing functionali
 - **🎯 Direct Element Access**: Hardcoded selectors eliminate selector search overhead
 - **🧹 Cleaner Codebase**: Easier maintenance and debugging
 - **📦 Smaller Footprint**: Reduced file count and complexity
+
+### Tuned Delays (Catat Penjualan)
+
+Delays optimized for responsiveness without sacrificing stability:
+
+- After login: 0.8s
+- Before clicking Catat Penjualan: 0.7s
+- After clicking Catat Penjualan: 0.8s
+- Wait for NIK popup: 1.0s
+- After filling NIK: 0.5s
+- After “LANJUTKAN PENJUALAN”: 0.8s
+- “CEK PESANAN”: 0.7s before + 0.8s after
+- “PROSES PENJUALAN”: 0.7s before + 0.8s after
 
 ## 🤝 Contributing
 

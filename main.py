@@ -323,6 +323,16 @@ def main():
         run_batalkan_inputan(accounts, selected_date)
         return
     
+    # Handle menu choice 3 - Catat Penjualan
+    if menu_choice == 3:
+        print("\n📝 === FITUR CATAT PENJUALAN ===")
+        print("Memulai proses Catat Penjualan...")
+        
+        # Tidak ada filter tanggal untuk Catat Penjualan
+        from src.utils import run_catat_penjualan
+        run_catat_penjualan(accounts, selected_date=None)
+        return
+    
     # Jika menu_choice == 1 (Check Stok), lanjutkan ke proses normal
     print("\n📊 Memulai proses Check Stok...")
     

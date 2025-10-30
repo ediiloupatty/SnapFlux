@@ -31,7 +31,7 @@ def click_laporan_penjualan_direct(driver):
     """
     print("\n📊 === KLIK LAPORAN PENJUALAN LANGSUNG ===")
     try:
-        time.sleep(1.5)
+        time.sleep(0.7)
         print("🚀 Mengklik Laporan Penjualan langsung menggunakan lokasi yang sudah diketahui...")
         try:
             element = driver.find_element(By.XPATH, "//*[contains(text(), 'Laporan Penjualan')]")
@@ -44,7 +44,7 @@ def click_laporan_penjualan_direct(driver):
                     element.click()
                     print(f"🔍 Debug Laporan Penjualan Success: XPath='//*[contains(text(), 'Laporan Penjualan')]'")
                     print(f"✅ Berhasil mengklik menu: '{text}'")
-                    time.sleep(2.0)
+                    time.sleep(0.8)
                     print("✅ Navigasi ke Laporan Penjualan berhasil!")
                     return True
                 else:
@@ -67,7 +67,7 @@ def click_laporan_penjualan_direct(driver):
                         element.click()
                         print(f"🔍 Debug Laporan Penjualan Fallback Success: XPath='//*[contains(text(), 'Laporan Penjualan')]'")
                         print(f"✅ Berhasil mengklik menu: '{text}'")
-                        time.sleep(3)
+                        time.sleep(0.8)
                         print("✅ Navigasi ke Laporan Penjualan berhasil!")
                         return True
                     else:
@@ -496,7 +496,7 @@ def click_date_elements_rekap_penjualan(driver, selected_date=None):
     print("\n📅 === KLIK ELEMEN TANGGAL DI REKAP PENJUALAN ===")
     
     try:
-        time.sleep(1.5)
+        time.sleep(0.7)
         print("🚀 Mencari elemen filter tanggal di Rekap Penjualan...")
         
         # === STEP 1: Klik "Atur Rentang Waktu" dengan ID selector (STABIL) ===
@@ -791,4 +791,101 @@ def click_rekap_penjualan_direct(driver):
         
     except Exception as e:
         print(f"❌ Error mengklik Rekap Penjualan: {str(e)}")
+        return False
+
+def click_catat_penjualan_direct(driver):
+    """
+    ============================================
+    FUNGSI NAVIGASI KE CATAT PENJUALAN
+    ============================================
+    
+    Fungsi ini melakukan navigasi ke menu 'Catat Penjualan' dengan menggunakan
+    direct selector yang sudah dioptimasi untuk performa maksimal.
+    
+    Proses yang dilakukan:
+    1. Mencari elemen dengan text "Catat Penjualan" menggunakan XPath
+    2. Validasi bahwa elemen yang ditemukan benar-benar menu Catat Penjualan
+    3. Cek apakah elemen dapat diklik (is_displayed dan is_enabled)
+    4. Klik elemen jika valid
+    5. Fallback ke class selector jika XPath gagal
+    
+    Args:
+        driver: WebDriver object yang sudah login ke portal merchant
+    
+    Returns:
+        bool: True jika berhasil navigasi ke Catat Penjualan, False jika gagal
+    """
+    print("\n📝 === KLIK CATAT PENJUALAN LANGSUNG ===")
+    try:
+        time.sleep(1.5)
+        print("🚀 Mengklik Catat Penjualan langsung menggunakan lokasi yang sudah diketahui...")
+        try:
+            # Direct absolute XPath dari debug run
+            direct_xpath = "//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[1]"
+            try:
+                element = driver.find_element(By.XPATH, direct_xpath)
+            except Exception:
+                element = driver.find_element(By.XPATH, "//*[contains(text(), 'Catat Penjualan')]")
+            text = element.text.strip()
+            if text and 'catat' in text.lower() and 'penjualan' in text.lower():
+                print(f"✅ Menu Catat Penjualan ditemukan langsung!")
+                print(f"📝 Text: '{text}'")
+                print(f"🔍 Debug Catat Penjualan 1: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
+                try:
+                    # Cetak selector langsung yang bisa dipakai nanti
+                    xpath = driver.execute_script("""
+                        function absoluteXPath(el){
+                          if(el.id) return '//*[@id="'+el.id+'"]';
+                          const parts=[]; while(el && el.nodeType===1){
+                            let ix=0, sib=el.previousSibling; while(sib){ if (sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
+                            parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; }
+                          return '//'+parts.join('/'); }
+                        return absoluteXPath(arguments[0]);
+                    """, element)
+                    css = driver.execute_script("""
+                        function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
+                        return cssPath(arguments[0]);
+                    """, element)
+                    print(f"🔗 Suggested XPath: {xpath}")
+                    print(f"🔗 Suggested CSS: {css}")
+                except Exception:
+                    pass
+                if element.is_displayed() and element.is_enabled():
+                    element.click()
+                    print(f"🔍 Debug Catat Penjualan Success: XPath='//*[contains(text(), 'Catat Penjualan')]'")
+                    print(f"✅ Berhasil mengklik menu: '{text}'")
+                    time.sleep(0.8)
+                    print("✅ Navigasi ke Catat Penjualan berhasil!")
+                    return True
+                else:
+                    print("❌ Menu tidak dapat diklik")
+                    return False
+            else:
+                print("❌ Elemen tidak mengandung 'Catat Penjualan'")
+                return False
+        except Exception as e:
+            print(f"⚠️ Error dengan XPath selector: {str(e)}")
+            print("🔄 Mencoba dengan class fallback...")
+            try:
+                element = driver.find_element(By.CLASS_NAME, "mantine-Text-root")
+                text = element.text.strip()
+                if text and 'catat' in text.lower() and 'penjualan' in text.lower():
+                    print(f"✅ Menu Catat Penjualan ditemukan dengan class fallback!")
+                    print(f"📝 Text: '{text}'")
+                    print(f"🔍 Debug Catat Penjualan Fallback: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
+                    if element.is_displayed() and element.is_enabled():
+                        element.click()
+                        print(f"🔍 Debug Catat Penjualan Fallback Success: XPath='//*[contains(text(), 'Catat Penjualan')]'")
+                        print(f"✅ Berhasil mengklik menu: '{text}'")
+                        time.sleep(0.8)
+                        print("✅ Navigasi ke Catat Penjualan berhasil!")
+                        return True
+                    else:
+                        print("❌ Menu tidak dapat diklik")
+                        return False
+            except Exception as e2:
+                print(f"❌ Error dengan class fallback: {str(e2)}")
+        return False
+    except Exception as e:
+        print(f"❌ Error mengklik Catat Penjualan: {str(e)}")
         return False
