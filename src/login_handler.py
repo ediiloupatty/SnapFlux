@@ -154,7 +154,7 @@ def login_direct(username, pin):
             
             # Tunggu 30 detik - OPTIMIZED
             print("⏳ Menunggu 30 detik...")
-            time.sleep(30)
+            time.sleep(120)
             print("✅ Tunggu 30 detik selesai!")
             
             # Langsung klik tombol MASUK lagi tanpa reload - OPTIMIZED

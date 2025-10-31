@@ -555,29 +555,70 @@ def click_date_elements_rekap_penjualan(driver, selected_date=None):
             bulan_name = BULAN_ID[selected_date.month]
             tahun = selected_date.year
             bulan_tahun_text = f"{bulan_name.lower().capitalize()} {tahun}"
+            print(f"📅 DEBUG: Input user - selected_date.month={selected_date.month}, selected_date.year={selected_date.year}")
+            print(f"📅 DEBUG: bulan_name dari BULAN_ID[{selected_date.month}] = '{bulan_name}'")
+            print(f"📅 DEBUG: bulan_tahun_text yang akan dicari = '{bulan_tahun_text}'")
         else:
             today = datetime.now()
             bulan_name = BULAN_ID[today.month]
             tahun = today.year
             bulan_tahun_text = f"{bulan_name.lower().capitalize()} {tahun}"
+            print(f"📅 DEBUG: Menggunakan tanggal hari ini - month={today.month}, year={today.year}")
         
         print(f"🎯 Mencari elemen bulan tahun: '{bulan_tahun_text}'")
+        print(f"🔍 Validasi yang akan digunakan: bulan '{bulan_name}' (lowercase: '{bulan_name.lower()}') dan tahun '{tahun}'")
         
         bulan_tahun_found = False
         
         # Tier 1: XPath dengan dynamic text (FAST)
         try:
             elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{bulan_tahun_text}')]")
-            for element in elements:
-                text = element.text.strip()
-                if text and bulan_name.lower() in text.lower() and str(tahun) in text:
-                    if element.is_displayed() and element.is_enabled():
-                        print(f"🔍 Debug Bulan Tahun: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}, Location={element.location}, Size={element.size}")
-                        element.click()
-                        print(f"🔍 Debug Bulan Tahun Success: XPath='//*[contains(text(), '{bulan_tahun_text}')]'")
-                        print(f"✅ Berhasil mengklik bulan tahun: '{text}'")
-                        bulan_tahun_found = True
-                        break
+            print(f"🔍 Tier 1: Ditemukan {len(elements)} elemen dengan XPath contains('{bulan_tahun_text}')")
+            
+            for idx, element in enumerate(elements):
+                try:
+                    text = element.text.strip()
+                    print(f"   Elemen {idx+1}: text='{text}'")
+                    
+                    # Validasi yang lebih ketat: pastikan teks mengandung bulan YANG PERSIS dan tahun yang benar
+                    text_lower = text.lower()
+                    bulan_name_lower = bulan_name.lower()
+                    
+                    # Validasi: bulan harus ada di text DAN tahun harus ada di text
+                    bulan_matches = bulan_name_lower in text_lower
+                    tahun_matches = str(tahun) in text
+                    
+                    print(f"      Validasi: bulan_matches={bulan_matches} (mencari '{bulan_name_lower}' di '{text_lower}')")
+                    print(f"      Validasi: tahun_matches={tahun_matches} (mencari '{tahun}' di '{text}')")
+                    
+                    if bulan_matches and tahun_matches:
+                        # Validasi tambahan: pastikan ini bukan bulan lain yang mengandung substring yang sama
+                        # Contoh: "September" tidak boleh match dengan "Oktober"
+                        if element.is_displayed() and element.is_enabled():
+                            print(f"🔍 Debug Bulan Tahun: Text='{text}', Tag={element.tag_name}, Class={element.get_attribute('class')}, ID={element.get_attribute('id')}")
+                            
+                            # Validasi final: pastikan text benar-benar mengandung bulan yang dimaksud
+                            # Bandingkan dengan semua nama bulan untuk memastikan tidak ada false positive
+                            target_month = selected_date.month if selected_date else datetime.now().month
+                            is_exact_match = False
+                            for bulan_idx in range(1, 13):
+                                if BULAN_ID[bulan_idx].lower() in text_lower and bulan_idx == target_month:
+                                    is_exact_match = True
+                                    break
+                            
+                            if is_exact_match:
+                                element.click()
+                                print(f"✅ Berhasil mengklik bulan tahun: '{text}' (VALIDASI PASSED)")
+                                bulan_tahun_found = True
+                                break
+                            else:
+                                print(f"⚠️ Elemen '{text}' ditemukan tapi tidak sesuai dengan bulan yang diminta (bulan {target_month})")
+                    else:
+                        print(f"      ⚠️ Elemen {idx+1} tidak memenuhi validasi")
+                except Exception as e_inner:
+                    print(f"      ⚠️ Error memproses elemen {idx+1}: {str(e_inner)}")
+                    continue
+                    
         except Exception as e:
             print(f"⚠️ Error dengan XPath dynamic: {str(e)}")
         
@@ -586,21 +627,41 @@ def click_date_elements_rekap_penjualan(driver, selected_date=None):
             print("🔄 Mencoba dengan class fallback...")
             try:
                 elements = driver.find_elements(By.CLASS_NAME, "mantine-CalendarHeader-calendarHeaderLevel")
-                for element in elements:
-                    text = element.text.strip()
-                    if text and bulan_name.lower() in text.lower() and str(tahun) in text:
-                        if element.is_displayed() and element.is_enabled():
-                            print(f"✅ Elemen bulan tahun ditemukan dengan class fallback!")
-                            print(f"📝 Text: '{text}'")
-                            element.click()
-                            print(f"✅ Berhasil mengklik bulan tahun: '{text}'")
-                            bulan_tahun_found = True
-                            break
+                print(f"🔍 Tier 2: Ditemukan {len(elements)} elemen dengan class mantine-CalendarHeader-calendarHeaderLevel")
+                
+                for idx, element in enumerate(elements):
+                    try:
+                        text = element.text.strip()
+                        print(f"   Elemen {idx+1}: text='{text}'")
+                        
+                        text_lower = text.lower()
+                        bulan_name_lower = bulan_name.lower()
+                        bulan_matches = bulan_name_lower in text_lower
+                        tahun_matches = str(tahun) in text
+                        
+                        if bulan_matches and tahun_matches:
+                            # Validasi tambahan seperti Tier 1
+                            if element.is_displayed() and element.is_enabled():
+                                target_month = selected_date.month if selected_date else datetime.now().month
+                                is_exact_match = False
+                                for bulan_idx in range(1, 13):
+                                    if BULAN_ID[bulan_idx].lower() in text_lower and bulan_idx == target_month:
+                                        is_exact_match = True
+                                        break
+                                
+                                if is_exact_match:
+                                    print(f"✅ Elemen bulan tahun ditemukan dengan class fallback: '{text}'")
+                                    element.click()
+                                    print(f"✅ Berhasil mengklik bulan tahun: '{text}' (VALIDASI PASSED)")
+                                    bulan_tahun_found = True
+                                    break
+                    except Exception as e_inner:
+                        continue
             except Exception as e2:
                 print(f"❌ Error dengan class fallback: {str(e2)}")
         
         if not bulan_tahun_found:
-            print(f"❌ Elemen bulan tahun '{bulan_tahun_text}' tidak ditemukan")
+            print(f"❌ Elemen bulan tahun '{bulan_tahun_text}' tidak ditemukan setelah mencoba semua approach")
             return False
         
         time.sleep(1)

@@ -577,6 +577,9 @@ def get_date_input():
             
             day, month, year = map(int, date_input.split('/'))
             
+            # Debug: Tampilkan hasil parsing
+            print(f"🔍 Debug parsing: day={day}, month={month}, year={year}")
+            
             if year < 2020 or year > 2030:
                 print("❌ Tahun tidak valid! Gunakan tahun antara 2020-2030")
                 continue
@@ -589,11 +592,27 @@ def get_date_input():
             
             try:
                 selected_date = datetime(year, month, day)
-            except Exception:
-                print("❌ Tanggal tidak valid!")
+                # Validasi tambahan: pastikan tanggal yang dibuat sesuai dengan input
+                if selected_date.day != day or selected_date.month != month or selected_date.year != year:
+                    print(f"❌ Error: Tanggal yang dibuat tidak sesuai dengan input!")
+                    print(f"   Input: day={day}, month={month}, year={year}")
+                    print(f"   Hasil: day={selected_date.day}, month={selected_date.month}, year={selected_date.year}")
+                    continue
+            except ValueError as ve:
+                print(f"❌ Tanggal tidak valid! {str(ve)}")
+                continue
+            except Exception as e:
+                print(f"❌ Error membuat tanggal: {str(e)}")
                 continue
             
-            print(f"✅ Menggunakan tanggal: {selected_date.strftime('%d %B %Y')}")
+            # Validasi final: tampilkan tanggal yang akan digunakan
+            from .constants import BULAN_ID
+            print(f"✅ Tanggal berhasil di-parse:")
+            print(f"   📅 Format lengkap: {selected_date.strftime('%d %B %Y')}")
+            print(f"   🔢 Day: {selected_date.day}, Month: {selected_date.month}, Year: {selected_date.year}")
+            if 1 <= selected_date.month <= 12:
+                bulan_indonesia = BULAN_ID[selected_date.month]
+                print(f"   📝 Nama bulan (Indonesia): {bulan_indonesia}")
             return selected_date
             
         except Exception as e:
