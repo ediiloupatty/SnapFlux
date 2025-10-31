@@ -482,12 +482,29 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
                 raise js_error
         
         print("✅ Berhasil mengisi NIK dan mengklik LANJUTKAN PENJUALAN!")
-        time.sleep(0.2)  # Tunggu halaman load (reduced untuk total delay 0.5s)
+        time.sleep(0.3)  # Tunggu halaman load (reduced untuk total delay maksimal 1 detik)
 
+        # Coba langsung klik CEK PESANAN terlebih dahulu (optimasi: jika berhasil langsung lanjut)
+        import time as time_module
+        cek_start_time = time_module.time()
+        print("🔍 Mencoba klik CEK PESANAN langsung...")
+        try:
+            # Panggil fungsi click_cek_pesanan yang sudah ada di file yang sama
+            cek_pesanan_success = click_cek_pesanan(driver)
+            cek_elapsed = time_module.time() - cek_start_time
+            if cek_pesanan_success:
+                print(f"✅ CEK PESANAN berhasil diklik langsung - lanjutkan proses (waktu: {cek_elapsed:.2f} detik)")
+                return True
+            else:
+                print(f"⚠️ CEK PESANAN tidak ditemukan atau gagal - akan cek popup dulu (waktu: {cek_elapsed:.2f} detik)")
+        except Exception as e:
+            cek_elapsed = time_module.time() - cek_start_time
+            print(f"⚠️ Error saat mencoba klik CEK PESANAN: {str(e)} - akan cek popup dulu (waktu: {cek_elapsed:.2f} detik)")
+        
+        # Jika CEK PESANAN gagal, cek popup (TUTUP, NIB, Ganti Pelanggan)
         # 1) Jika ada popup dengan tombol "TUTUP", klik dan kembali ke awal
         try:
-            # Tunggu sedikit agar popup muncul (reduced untuk total delay 0.5s)
-            time.sleep(0.1)
+            # Langsung cari tombol TUTUP tanpa delay
             tutup_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]")
             
             if tutup_buttons:
@@ -519,9 +536,8 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
                                 # Coba JavaScript click
                                 driver.execute_script("arguments[0].click();", target_tutup)
                             else:
-                                # Coba scroll into view lalu click
+                                # Coba scroll into view lalu click (tanpa delay)
                                 driver.execute_script("arguments[0].scrollIntoView(true);", target_tutup)
-                                time.sleep(0.2)
                                 target_tutup.click()
                             
                             clicked = True
@@ -534,24 +550,7 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
                                 print(f"❌ Semua attempt gagal: {str(e)}")
                     
                     if clicked:
-                        # Tunggu dan verifikasi popup tertutup
-                        time.sleep(1.5)
-                        try:
-                            # Verifikasi bahwa tombol TUTUP sudah tidak ada lagi
-                            remaining_tutup = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]")
-                            still_visible = [btn for btn in remaining_tutup if btn.is_displayed()]
-                            if still_visible:
-                                print(f"⚠️ Popup masih terlihat, mencoba klik lagi...")
-                                for btn in still_visible[:1]:  # Klik yang pertama
-                                    try:
-                                        driver.execute_script("arguments[0].click();", btn)
-                                        time.sleep(1.0)
-                                    except:
-                                        pass
-                        except:
-                            pass
-                        
-                        # Setelah klik TUTUP, klik ulang Catat Penjualan untuk membuka form NIK lagi
+                        # Langsung klik ulang Catat Penjualan tanpa delay setelah klik TUTUP
                         print("🔄 Klik ulang 'Catat Penjualan' setelah TUTUP...")
                         try:
                             from .navigation_handler import click_catat_penjualan_direct
@@ -571,14 +570,76 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
             print(f"⚠️ Error saat mencari/mengklik tombol TUTUP: {str(e)}")
             pass
 
-        # 2) Jika muncul peringatan: "Tidak dapat transaksi karena telah melebihi batas kewajaran ..."
+        # 2) Jika ada popup NIB dengan tombol "Nanti Saja, Lanjut Transaksi", klik tombol tersebut
+        try:
+            # Deteksi popup NIB dengan mencari teks "NIB" atau "Lengkapi NIB"
+            nib_detected = False
+            nib_selectors = [
+                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'LENGKAPI NIB')]"),
+                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'NOMOR INDUK BERUSAH')]"),
+                (By.XPATH, "//*[contains(@class, 'icon-warning-nib')]"),
+                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'SEGERA LENGKAPI NIB')]")
+            ]
+            for how, sel in nib_selectors:
+                if driver.find_elements(how, sel):
+                    nib_detected = True
+                    print("📋 Popup NIB terdeteksi — mencari tombol 'Nanti Saja, Lanjut Transaksi'...")
+                    break
+            
+            if nib_detected:
+                # Cari tombol "Nanti Saja, Lanjut Transaksi" atau "Lanjut Transaksi"
+                lanjut_transaksi_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'LANJUT TRANSAKSI') or contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'NANTI SAJA')]")
+                
+                target_lanjut = None
+                for btn in lanjut_transaksi_buttons:
+                    label = (btn.text or '').strip().upper()
+                    try:
+                        if ('LANJUT' in label and 'TRANSAKSI' in label) or ('NANTI' in label and 'SAJA' in label):
+                            if btn.is_displayed() and btn.is_enabled():
+                                target_lanjut = btn
+                                print(f"✅ Tombol 'Nanti Saja, Lanjut Transaksi' ditemukan: '{btn.text.strip()}'")
+                                break
+                    except:
+                        continue
+                
+                if target_lanjut:
+                    print("🚀 Mengklik tombol 'Nanti Saja, Lanjut Transaksi'...")
+                    try:
+                        target_lanjut.click()
+                        print("✅ Tombol 'Nanti Saja, Lanjut Transaksi' berhasil diklik (normal click)")
+                    except Exception as e:
+                        try:
+                            driver.execute_script("arguments[0].click();", target_lanjut)
+                            print("✅ Tombol 'Nanti Saja, Lanjut Transaksi' berhasil diklik (JavaScript click)")
+                        except Exception as e2:
+                            print(f"❌ Gagal mengklik tombol 'Nanti Saja, Lanjut Transaksi': {str(e2)}")
+                    
+                    time.sleep(0.5)  # Tunggu popup tertutup
+                    print("✅ Popup NIB ditutup - coba klik CEK PESANAN...")
+                    # Setelah klik NIB, coba klik CEK PESANAN
+                    try:
+                        cek_pesanan_success = click_cek_pesanan(driver)
+                        if cek_pesanan_success:
+                            print("✅ CEK PESANAN berhasil diklik setelah handle NIB - lanjutkan proses")
+                            return True
+                        else:
+                            print("⚠️ CEK PESANAN tidak ditemukan setelah handle NIB - lanjut cek popup lain")
+                    except Exception as e:
+                        print(f"⚠️ Error saat mencoba klik CEK PESANAN setelah handle NIB: {str(e)} - lanjut cek popup lain")
+        except Exception as e:
+            print(f"⚠️ Error saat mencari/mengklik popup NIB: {str(e)}")
+            pass
+
+        # 3) Jika muncul peringatan: "Tidak dapat transaksi karena telah melebihi batas kewajaran ..."
         #    maka klik "Ganti Pelanggan" lalu kembalikan False agar loop memakai NIK berikutnya
         try:
-            warning_found = False
+            # Optimasi: Cek langsung tanpa loop, gunakan selector yang lebih spesifik
             warning_selectors = [
-                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TIDAK DAPAT TRANSAKSI')]") ,
+                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TIDAK DAPAT TRANSAKSI')]"),
                 (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'MELEBIHI BATAS KEWAJARAN')]")
             ]
+            
+            warning_found = False
             for how, sel in warning_selectors:
                 if driver.find_elements(how, sel):
                     warning_found = True
@@ -587,35 +648,25 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
             if warning_found:
                 print("⚠️ Deteksi peringatan batas kewajaran — akan klik 'Ganti Pelanggan' dan lanjut ke NIK berikutnya")
                 try:
+                    # Optimasi: Langsung cari tombol Ganti Pelanggan tanpa loop yang tidak perlu
                     ganti_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'GANTI PELANGGAN')]")
                     target_ganti = None
                     for gb in ganti_buttons:
-                        lbl = (gb.text or '').strip().upper()
-                        if 'GANTI' in lbl and 'PELANGGAN' in lbl and gb.is_displayed() and gb.is_enabled():
-                            target_ganti = gb
-                            break
-                    if target_ganti:
-                        # Debug selector untuk tombol Ganti Pelanggan
                         try:
-                            xpath = driver.execute_script("""
-                                function absoluteXPath(el){ if(el.id) return '//*[@id="'+el.id+'"]';
-                                  const parts=[]; while(el && el.nodeType===1){ let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
-                                  parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; } return '//'+parts.join('/'); }
-                                return absoluteXPath(arguments[0]);
-                            """, target_ganti)
-                            css = driver.execute_script("""
-                                function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
-                                return cssPath(arguments[0]);
-                            """, target_ganti)
-                            print(f"🔗 GANTI PELANGGAN XPath: {xpath}")
-                            print(f"🔗 GANTI PELANGGAN CSS: {css}")
-                        except Exception:
-                            pass
+                            lbl = (gb.text or '').strip().upper()
+                            if 'GANTI' in lbl and 'PELANGGAN' in lbl and gb.is_displayed() and gb.is_enabled():
+                                target_ganti = gb
+                                break
+                        except:
+                            continue
+                    
+                    if target_ganti:
+                        # Langsung klik tanpa debug info yang lambat
                         try:
                             target_ganti.click()
                         except Exception:
                             driver.execute_script("arguments[0].click();", target_ganti)
-                        time.sleep(0.5)
+                        # Tidak perlu delay, langsung return
                         print("✅ 'Ganti Pelanggan' diklik — kembalikan kontrol agar gunakan NIK berikutnya")
                     else:
                         print("❌ Tombol 'Ganti Pelanggan' tidak ditemukan")
@@ -627,9 +678,20 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
         except Exception:
             pass
 
-        # 3) Jika tidak ada TUTUP dan tidak ada Ganti Pelanggan, langsung lanjutkan ke CEK PESANAN
-        print("✅ Tidak ada popup/error terdeteksi - langsung lanjutkan ke CEK PESANAN")
-        return True
+        # 4) Jika tidak ada TUTUP, tidak ada NIB, dan tidak ada Ganti Pelanggan, coba klik CEK PESANAN lagi
+        print("✅ Tidak ada popup/error terdeteksi - coba klik CEK PESANAN...")
+        try:
+            # Coba klik CEK PESANAN setelah handle popup (jika ada)
+            cek_pesanan_success = click_cek_pesanan(driver)
+            if cek_pesanan_success:
+                print("✅ CEK PESANAN berhasil diklik setelah handle popup - lanjutkan proses")
+                return True
+            else:
+                print("⚠️ CEK PESANAN masih tidak ditemukan setelah handle popup")
+                return False
+        except Exception as e:
+            print(f"⚠️ Error saat mencoba klik CEK PESANAN setelah handle popup: {str(e)}")
+            return False
         
     except Exception as e:
         print(f"❌ Error mengisi form NIK: {str(e)}")
@@ -645,34 +707,83 @@ def click_cek_pesanan(driver):
     ============================================
     Mencari dan mengklik tombol CEK PESANAN pada halaman Penjualan.
     """
+    import time as time_module
+    start_time = time_module.time()
+    
     print("\n🧾 === KLIK CEK PESANAN ===")
     try:
-        time.sleep(0.2)  # Reduced untuk total delay 0.5s setelah LANJUTKAN PENJUALAN
-
+        # Prioritas selector: yang paling cepat dulu
         candidate_selectors = [
-            (By.XPATH, "//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/form[1]/div[4]/div[1]/button[1]"),
-            (By.XPATH, "//button[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'CEK PESANAN')]") ,
-            (By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'CEK PESANAN')]") ,
-            (By.XPATH, "//button[contains(@class,'button') and contains(., 'CEK')]") ,
-            (By.CLASS_NAME, "mantine-Button-root")
+            (By.XPATH, "//button[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'CEK PESANAN')]", True),  # Text-based dengan wait dinamis (prioritas)
+            (By.XPATH, "//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/form[1]/div[4]/div[1]/button[1]", False),  # XPath langsung, no wait (fallback cepat)
         ]
 
         target = None
-        for how, value in candidate_selectors:
+        max_total_time = 1.5  # Maksimal total waktu pencarian: 1.5 detik (dipercepat)
+        for how, value, use_wait in candidate_selectors:
+            # Cek waktu total, jika sudah melewati batas, langsung stop dan return
+            elapsed_time = time_module.time() - start_time
+            if elapsed_time >= max_total_time:
+                print(f"⏱️ Waktu pencarian melewati batas {max_total_time} detik - stop mencari dan lanjut ke flow popup")
+                elapsed_time = time_module.time() - start_time
+                print(f"❌ Tombol CEK PESANAN tidak ditemukan (waktu: {elapsed_time:.2f} detik) - lanjut ke flow popup")
+                return False  # Langsung return, skip debug info yang lambat
+                
             try:
-                elements = driver.find_elements(how, value)
-                for el in elements:
-                    label = (el.text or "").strip().upper()
-                    if "CEK" in label and "PESANAN" in label and el.is_enabled() and el.is_displayed():
-                        target = el
+                # Coba dengan explicit wait (untuk selector berbasis text)
+                if use_wait:
+                    try:
+                        # Hitung sisa waktu yang tersedia
+                        remaining_time = max_total_time - (time_module.time() - start_time)
+                        if remaining_time <= 0.1:
+                            # Tidak ada waktu tersisa (kurang dari 0.1 detik), skip selector ini
+                            continue
+                        
+                        # Gunakan wait yang sesuai dengan sisa waktu (maksimal 0.5 detik untuk cepat)
+                        wait_timeout = min(0.5, max(0.1, remaining_time - 0.1))  # Kurangi 0.1 untuk margin
+                        wait_remaining = WebDriverWait(driver, wait_timeout)
+                        # Gunakan visibility_of_element_located untuk memastikan tombol benar-benar visible
+                        wait_remaining.until(EC.visibility_of_element_located((how, value)))
+                        elements = driver.find_elements(how, value)
+                        for el in elements:
+                            label = (el.text or "").strip().upper()
+                            try:
+                                if "CEK" in label and "PESANAN" in label:
+                                    if el.is_displayed():
+                                        target = el
+                                        print(f"✅ Tombol CEK PESANAN ditemukan dengan selector: {value[:50]}...")
+                                        break
+                            except Exception:
+                                continue
+                        if target:
+                            break
+                    except Exception:
+                        # Jika explicit wait gagal, skip selector ini
+                        continue
+                else:
+                    # Langsung find_elements tanpa wait (untuk XPath langsung)
+                    elements = driver.find_elements(how, value)
+                    for el in elements:
+                        label = (el.text or "").strip().upper()
+                        try:
+                            if "CEK" in label and "PESANAN" in label:
+                                if el.is_displayed():
+                                    target = el
+                                    print(f"✅ Tombol CEK PESANAN ditemukan dengan selector: {value[:50]}...")
+                                    break
+                        except Exception:
+                            continue
+                    if target:
                         break
-                if target:
-                    break
-            except Exception:
+            except Exception as e:
                 continue
 
+        elapsed_time = time_module.time() - start_time
+        
         if not target:
-            print("❌ Tombol CEK PESANAN tidak ditemukan")
+            print(f"❌ Tombol CEK PESANAN tidak ditemukan setelah mencoba semua selector (waktu: {elapsed_time:.2f} detik) - lanjut ke flow popup")
+            # Skip debug info yang lambat untuk mempercepat proses
+            # Debug info hanya akan ditampilkan jika diperlukan untuk troubleshooting
             return False
 
         try:
@@ -693,14 +804,48 @@ def click_cek_pesanan(driver):
             print(f"🔗 CEK PESANAN CSS: {css}")
         except Exception:
             pass
+        
+        # Pastikan tombol visible dan dapat diklik
+        try:
+            # Scroll ke tombol jika perlu
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", target)
+            time.sleep(0.2)
+        except:
+            pass
+        
         print(f"✅ Tombol ditemukan: '{target.text.strip()}' — klik...")
-        target.click()
-        time.sleep(0.5)
-        print("✅ Berhasil klik CEK PESANAN")
-        return True
+        print(f"🔍 Info tombol: Displayed={target.is_displayed()}, Enabled={target.is_enabled()}")
+        
+        # Coba beberapa metode klik
+        clicked = False
+        try:
+            # Coba normal click dulu
+            target.click()
+            clicked = True
+            print("✅ Tombol CEK PESANAN berhasil diklik (normal click)")
+        except Exception as e1:
+            try:
+                # Fallback: JavaScript click
+                driver.execute_script("arguments[0].click();", target)
+                clicked = True
+                print("✅ Tombol CEK PESANAN berhasil diklik (JavaScript click)")
+            except Exception as e2:
+                print(f"❌ Gagal klik tombol CEK PESANAN: Normal={str(e1)}, JS={str(e2)}")
+                return False
+        
+        if clicked:
+            time.sleep(0.5)
+            elapsed_time = time_module.time() - start_time
+            print(f"✅ Berhasil klik CEK PESANAN (total waktu: {elapsed_time:.2f} detik)")
+            return True
+        else:
+            elapsed_time = time_module.time() - start_time
+            print(f"❌ Gagal klik CEK PESANAN (total waktu: {elapsed_time:.2f} detik)")
+            return False
 
     except Exception as e:
-        print(f"❌ Error klik CEK PESANAN: {str(e)}")
+        elapsed_time = time_module.time() - start_time
+        print(f"❌ Error klik CEK PESANAN: {str(e)} (total waktu: {elapsed_time:.2f} detik)")
         return False
 
 

@@ -378,13 +378,18 @@ def run_catat_penjualan(accounts, selected_date=None):
                     # NIK ini sudah ditandai sebagai dipakai, langsung lanjut ke random NIK berikutnya
                     continue
                 
-                # CEK PESANAN
-                print("🧾 Melanjutkan: klik CEK PESANAN...")
-                if not click_cek_pesanan(driver):
-                    print(f"❌ Gagal klik CEK PESANAN untuk {username}")
-                    rekap['gagal_navigasi'].append((username, "Gagal klik CEK PESANAN"))
-                    # NIK ini sudah ditandai sebagai dipakai, langsung lanjut ke random NIK berikutnya
-                    continue
+                # Jika form_result == True, berarti CEK PESANAN sudah diklik di fill_nik_form_and_continue
+                # Jadi skip bagian CEK PESANAN dan langsung lanjut ke PROSES PENJUALAN
+                if form_result is True:
+                    print("✅ CEK PESANAN sudah diklik sebelumnya di fill_nik_form_and_continue - skip klik CEK PESANAN, langsung lanjut ke PROSES PENJUALAN")
+                else:
+                    # CEK PESANAN belum diklik, klik sekarang (fallback untuk kompatibilitas)
+                    print("🧾 Melanjutkan: klik CEK PESANAN...")
+                    if not click_cek_pesanan(driver):
+                        print(f"❌ Gagal klik CEK PESANAN untuk {username}")
+                        rekap['gagal_navigasi'].append((username, "Gagal klik CEK PESANAN"))
+                        # NIK ini sudah ditandai sebagai dipakai, langsung lanjut ke random NIK berikutnya
+                        continue
                 
                 # PROSES PENJUALAN
                 print("🧾 Di halaman Cek Penjualan: klik PROSES PENJUALAN...")
