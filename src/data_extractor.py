@@ -6,6 +6,8 @@ import time
 import re
 from datetime import datetime
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 def get_stock_value_direct(driver):
     """
@@ -366,30 +368,19 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
         nik_to_use = nik_list[start_index]
         print(f"🔢 Menggunakan NIK index {start_index}: {nik_to_use}")
         
-        # Tunggu popup muncul
+        # Tunggu popup muncul dan cari input field NIK dengan explicit wait
         print("⏳ Menunggu popup form NIK muncul...")
-        time.sleep(1.0)
-        
-        # Cari input field NIK dengan direct approach
         nik_input = None
         try:
-            # Coba cari input dengan ID yang berubah-ubah (mantine-rXX)
-            input_elements = driver.find_elements(By.XPATH, "//input[contains(@id, 'mantine-r') and @type='text']")
-            if input_elements:
-                nik_input = input_elements[0]  # Ambil yang pertama
-                print(f"✅ Input field NIK ditemukan dengan ID: {nik_input.get_attribute('id')}")
-            else:
-                # Fallback ke placeholder search
-                nik_input = driver.find_element(By.XPATH, "//input[contains(@placeholder, 'NIK')]")
-                print(f"✅ Input field NIK ditemukan dengan placeholder")
-        except:
-            # Fallback ke class search
-            try:
-                nik_input = driver.find_element(By.CLASS_NAME, "mantine-Input-input")
-                print(f"✅ Input field NIK ditemukan dengan class")
-            except:
-                print("❌ Input field NIK tidak ditemukan dengan semua metode")
-                return False
+            # Gunakan explicit wait untuk menunggu elemen muncul (maksimal 10 detik)
+            wait = WebDriverWait(driver, 10)
+            nik_input = wait.until(
+                EC.presence_of_element_located((By.XPATH, "//input[contains(@placeholder, 'NIK')]"))
+            )
+            print(f"✅ Input field NIK ditemukan dengan placeholder")
+        except Exception as e:
+            print(f"❌ Input field NIK tidak ditemukan setelah menunggu: {str(e)}")
+            return False
         
         # Debug info (hanya jika berhasil)
         if nik_input:
@@ -491,46 +482,93 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
                 raise js_error
         
         print("✅ Berhasil mengisi NIK dan mengklik LANJUTKAN PENJUALAN!")
-        time.sleep(0.5)  # Tunggu halaman load
+        time.sleep(0.2)  # Tunggu halaman load (reduced untuk total delay 0.5s)
 
-        # 1) Jika ada popup dengan tombol "TUTUP", klik dan kembali ke awal (reopen Catat Penjualan)
+        # 1) Jika ada popup dengan tombol "TUTUP", klik dan kembali ke awal
         try:
+            # Tunggu sedikit agar popup muncul (reduced untuk total delay 0.5s)
+            time.sleep(0.1)
             tutup_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]")
-            for btn in tutup_buttons:
-                label = (btn.text or '').strip().upper()
-                if 'TUTUP' in label and btn.is_displayed() and btn.is_enabled():
-                    print("🪟 Popup terdeteksi — klik 'TUTUP'...")
-                    # Debug selector untuk tombol TUTUP
+            
+            if tutup_buttons:
+                print(f"🪟 Popup terdeteksi — menemukan {len(tutup_buttons)} tombol TUTUP, akan klik yang pertama...")
+                
+                # Cari tombol TUTUP yang paling relevan (visible dan enabled)
+                target_tutup = None
+                for btn in tutup_buttons:
+                    label = (btn.text or '').strip().upper()
                     try:
-                        xpath = driver.execute_script("""
-                            function absoluteXPath(el){ if(el.id) return '//*[@id="'+el.id+'"]';
-                              const parts=[]; while(el && el.nodeType===1){ let ix=0, sib=el.previousSibling; while(sib){ if(sib.nodeType===1 && sib.nodeName===el.nodeName) ix++; sib=sib.previousSibling; }
-                              parts.unshift(el.nodeName.toLowerCase()+'['+(ix+1)+']'); el=el.parentNode; } return '//'+parts.join('/'); }
-                            return absoluteXPath(arguments[0]);
-                        """, btn)
-                        css = driver.execute_script("""
-                            function cssPath(el){ if (!(el instanceof Element)) return; const path=[]; while (el.nodeType===1){ let selector=el.nodeName.toLowerCase(); if (el.id){ selector+='#'+el.id; path.unshift(selector); break; } else { let sib=el, nth=1; while (sib=sib.previousElementSibling){ if (sib.nodeName.toLowerCase()==selector) nth++; } selector += ':nth-of-type('+nth+')'; path.unshift(selector); el=el.parentNode; } } return path.join(' > '); }
-                            return cssPath(arguments[0]);
-                        """, btn)
-                        print(f"🔗 TUTUP XPath: {xpath}")
-                        print(f"🔗 TUTUP CSS: {css}")
-                    except Exception:
-                        pass
-                    try:
-                        btn.click()
-                    except Exception:
-                        driver.execute_script("arguments[0].click();", btn)
-                    time.sleep(0.5)
-                    # Reopen Catat Penjualan agar flow kembali ke kondisi awal
-                    try:
-                        from .navigation_handler import click_catat_penjualan_direct as _reopen_catat
-                        print("🔄 Reopen 'Catat Penjualan' setelah menutup popup...")
-                        _reopen_catat(driver)
-                    except Exception as e_ro:
-                        print(f"⚠️ Gagal reopen 'Catat Penjualan' setelah TUTUP: {str(e_ro)}")
-                    # Kembalikan kode khusus agar loop memakai NIK berikutnya tanpa menandai gagal
-                    return "REOPENED_AFTER_TUTUP"
-        except Exception:
+                        if 'TUTUP' in label and btn.is_displayed() and btn.is_enabled():
+                            target_tutup = btn
+                            print(f"✅ Tombol TUTUP ditemukan: '{label}'")
+                            break
+                    except:
+                        continue
+                
+                if target_tutup:
+                    print("🚀 Mengklik tombol TUTUP...")
+                    clicked = False
+                    
+                    # Coba klik dengan beberapa metode
+                    for attempt in range(3):
+                        try:
+                            if attempt == 0:
+                                # Coba normal click
+                                target_tutup.click()
+                            elif attempt == 1:
+                                # Coba JavaScript click
+                                driver.execute_script("arguments[0].click();", target_tutup)
+                            else:
+                                # Coba scroll into view lalu click
+                                driver.execute_script("arguments[0].scrollIntoView(true);", target_tutup)
+                                time.sleep(0.2)
+                                target_tutup.click()
+                            
+                            clicked = True
+                            print(f"✅ Tombol TUTUP berhasil diklik (attempt {attempt + 1})")
+                            break
+                        except Exception as e:
+                            if attempt < 2:
+                                print(f"⚠️ Attempt {attempt + 1} gagal, mencoba lagi...")
+                            else:
+                                print(f"❌ Semua attempt gagal: {str(e)}")
+                    
+                    if clicked:
+                        # Tunggu dan verifikasi popup tertutup
+                        time.sleep(1.5)
+                        try:
+                            # Verifikasi bahwa tombol TUTUP sudah tidak ada lagi
+                            remaining_tutup = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]")
+                            still_visible = [btn for btn in remaining_tutup if btn.is_displayed()]
+                            if still_visible:
+                                print(f"⚠️ Popup masih terlihat, mencoba klik lagi...")
+                                for btn in still_visible[:1]:  # Klik yang pertama
+                                    try:
+                                        driver.execute_script("arguments[0].click();", btn)
+                                        time.sleep(1.0)
+                                    except:
+                                        pass
+                        except:
+                            pass
+                        
+                        # Setelah klik TUTUP, klik ulang Catat Penjualan untuk membuka form NIK lagi
+                        print("🔄 Klik ulang 'Catat Penjualan' setelah TUTUP...")
+                        try:
+                            from .navigation_handler import click_catat_penjualan_direct
+                            catat_reopen = click_catat_penjualan_direct(driver)
+                            if catat_reopen:
+                                print("✅ Berhasil klik ulang Catat Penjualan setelah TUTUP")
+                            else:
+                                print("⚠️ Gagal klik ulang Catat Penjualan, tapi akan lanjut")
+                        except Exception as e_reopen:
+                            print(f"⚠️ Error saat klik ulang Catat Penjualan: {str(e_reopen)}")
+                        
+                        print("✅ Popup TUTUP diklik dan Catat Penjualan sudah dibuka lagi - siap untuk NIK berikutnya")
+                        return "REOPENED_AFTER_TUTUP"
+                    else:
+                        print("❌ Gagal mengklik tombol TUTUP setelah semua attempt")
+        except Exception as e:
+            print(f"⚠️ Error saat mencari/mengklik tombol TUTUP: {str(e)}")
             pass
 
         # 2) Jika muncul peringatan: "Tidak dapat transaksi karena telah melebihi batas kewajaran ..."
@@ -589,8 +627,8 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
         except Exception:
             pass
 
-        # Jika tidak ada kondisi khusus, lanjut ke proses berikutnya (CEK PESANAN)
-        print("✅ Form NIK berhasil diisi dan LANJUTKAN PENJUALAN diklik!")
+        # 3) Jika tidak ada TUTUP dan tidak ada Ganti Pelanggan, langsung lanjutkan ke CEK PESANAN
+        print("✅ Tidak ada popup/error terdeteksi - langsung lanjutkan ke CEK PESANAN")
         return True
         
     except Exception as e:
@@ -609,7 +647,7 @@ def click_cek_pesanan(driver):
     """
     print("\n🧾 === KLIK CEK PESANAN ===")
     try:
-        time.sleep(0.5)
+        time.sleep(0.2)  # Reduced untuk total delay 0.5s setelah LANJUTKAN PENJUALAN
 
         candidate_selectors = [
             (By.XPATH, "//html[1]/body[1]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/form[1]/div[4]/div[1]/button[1]"),

@@ -5,6 +5,7 @@ File ini berisi fungsi-fungsi bantuan untuk file handling, validasi, dan logging
 import os
 import time
 import re
+import random
 import pandas as pd
 import logging
 import queue
@@ -332,49 +333,49 @@ def run_catat_penjualan(accounts, selected_date=None):
             except Exception as _e_dbg:
                 print(f"⚠️ Gagal mencetak debug selector: {str(_e_dbg)}")
             
-            # Persistent pointer start (per username)
-            try:
-                from .state_manager import get_next_index, advance_next_index
-                start_index = get_next_index(username, len(nik_list))
-                print(f"🧭 Start index persisten untuk {username}: {start_index}")
-            except Exception:
-                start_index = account_index % len(nik_list)
-                advance_next_index = None
-                print(f"🧭 Start index fallback untuk {username}: {start_index}")
-
             used_indices = set()
-            current_index = start_index
+            print(f"🎲 Mode: Random selection NIK (total {len(nik_list)} NIK)")
             tx_done = 0
             
             from .data_extractor import click_cek_pesanan, click_proses_penjualan
             from .data_extractor import wait_for_captcha_and_success, click_kembali_ke_halaman_utama
             from .navigation_handler import click_catat_penjualan_direct as _reopen_catat
             
+            # Fungsi helper untuk memilih random index yang belum dipakai
+            def get_random_unused_index():
+                """Mengembalikan random index dari NIK yang belum dipakai"""
+                available_indices = [i for i in range(len(nik_list)) if i not in used_indices]
+                if not available_indices:
+                    return None  # Semua sudah dipakai
+                return random.choice(available_indices)
+            
             while len(used_indices) < len(nik_list):
-                # Cari index NIK yang belum dipakai
-                while current_index in used_indices:
-                    current_index = (current_index + 1) % len(nik_list)
-                nik_index = current_index
+                # Pilih random index NIK yang belum dipakai
+                nik_index = get_random_unused_index()
+                if nik_index is None:
+                    print("✅ Semua NIK sudah dipakai!")
+                    break
+                
                 used_indices.add(nik_index)
                 
                 print(f"🧾 Transaksi ke-{tx_done+1} dari {len(nik_list)} | NIK index: {nik_index} | NIK: {nik_list[nik_index]}")
                 
                 # Isi form NIK
                 form_result = fill_nik_form_and_continue(driver, nik_list, nik_index)
-                # Advance persistent pointer after each attempt
-                try:
-                    if advance_next_index:
-                        advance_next_index(username, len(nik_list), 1)
-                except Exception:
-                    pass
-                if form_result in ("RETRY_NEXT_NIK", "REOPENED_AFTER_TUTUP"):
-                    # Kasus tertangani (popup TUTUP / batas kewajaran + Ganti Pelanggan) — jangan tandai gagal
-                    current_index = (current_index + 1) % len(nik_list)
+                
+                if form_result == "RETRY_NEXT_NIK":
+                    # Kasus batas kewajaran + Ganti Pelanggan — jangan tandai gagal
+                    # NIK ini sudah ditandai sebagai dipakai, langsung lanjut ke random NIK berikutnya
+                    continue
+                if form_result == "REOPENED_AFTER_TUTUP":
+                    # Setelah klik TUTUP, form NIK seharusnya masih tersedia untuk NIK berikutnya
+                    # NIK ini sudah ditandai sebagai dipakai, langsung lanjut ke random NIK berikutnya
+                    print("🔄 Setelah TUTUP - memastikan form NIK tersedia untuk NIK berikutnya...")
                     continue
                 if not form_result:
                     print(f"❌ Gagal mengisi form NIK (index {nik_index}) untuk {username}")
                     rekap['gagal_navigasi'].append((username, f"Gagal isi NIK idx {nik_index}"))
-                    current_index = (current_index + 1) % len(nik_list)
+                    # NIK ini sudah ditandai sebagai dipakai, langsung lanjut ke random NIK berikutnya
                     continue
                 
                 # CEK PESANAN
@@ -382,7 +383,7 @@ def run_catat_penjualan(accounts, selected_date=None):
                 if not click_cek_pesanan(driver):
                     print(f"❌ Gagal klik CEK PESANAN untuk {username}")
                     rekap['gagal_navigasi'].append((username, "Gagal klik CEK PESANAN"))
-                    current_index = (current_index + 1) % len(nik_list)
+                    # NIK ini sudah ditandai sebagai dipakai, langsung lanjut ke random NIK berikutnya
                     continue
                 
                 # PROSES PENJUALAN
@@ -390,7 +391,7 @@ def run_catat_penjualan(accounts, selected_date=None):
                 if not click_proses_penjualan(driver):
                     print(f"❌ Gagal klik PROSES PENJUALAN untuk {username}")
                     rekap['gagal_navigasi'].append((username, "Gagal klik PROSES PENJUALAN"))
-                    current_index = (current_index + 1) % len(nik_list)
+                    # NIK ini sudah ditandai sebagai dipakai, langsung lanjut ke random NIK berikutnya
                     continue
                 
                 # CAPTCHA & SUCCESS
@@ -398,7 +399,7 @@ def run_catat_penjualan(accounts, selected_date=None):
                 if not wait_for_captcha_and_success(driver, max_wait_seconds=180):
                     print(f"❌ Tidak terdeteksi halaman sukses untuk {username} (mungkin captcha belum selesai)")
                     rekap['gagal_navigasi'].append((username, "Captcha/sukses tidak terdeteksi"))
-                    current_index = (current_index + 1) % len(nik_list)
+                    # NIK ini sudah ditandai sebagai dipakai, langsung lanjut ke random NIK berikutnya
                     continue
                 
                 # Kembali ke halaman utama dan buka lagi Catat Penjualan
@@ -410,7 +411,7 @@ def run_catat_penjualan(accounts, selected_date=None):
                 _reopen_catat(driver)
                 
                 tx_done += 1
-                current_index = (current_index + 1) % len(nik_list)
+                # Lanjut ke random NIK berikutnya (sudah otomatis karena loop akan memilih random lagi)
             
             print(f"✅ Loop transaksi selesai untuk {username}: {tx_done}/{len(nik_list)} transaksi")
             rekap['sukses'].append(username)
