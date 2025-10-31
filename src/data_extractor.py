@@ -501,8 +501,55 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
             cek_elapsed = time_module.time() - cek_start_time
             print(f"⚠️ Error saat mencoba klik CEK PESANAN: {str(e)} - akan cek popup dulu (waktu: {cek_elapsed:.2f} detik)")
         
-        # Jika CEK PESANAN gagal, cek popup (TUTUP, NIB, Ganti Pelanggan)
-        # 1) Jika ada popup dengan tombol "TUTUP", klik dan kembali ke awal
+        # Jika CEK PESANAN gagal, cek popup (Ganti Pelanggan PRIORITAS, lalu TUTUP, lalu NIB)
+        # 1) PRIORITAS: Cek "Ganti Pelanggan" (batas kewajaran) DULU sebelum TUTUP
+        try:
+            # Optimasi: Cek langsung tanpa loop, gunakan selector yang lebih spesifik
+            warning_selectors = [
+                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TIDAK DAPAT TRANSAKSI')]"),
+                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'MELEBIHI BATAS KEWAJARAN')]")
+            ]
+            
+            warning_found = False
+            for how, sel in warning_selectors:
+                if driver.find_elements(how, sel):
+                    warning_found = True
+                    break
+
+            if warning_found:
+                print("⚠️ Deteksi peringatan batas kewajaran — akan klik 'Ganti Pelanggan' dan lanjut ke NIK berikutnya")
+                try:
+                    # Optimasi: Langsung cari tombol Ganti Pelanggan tanpa loop yang tidak perlu
+                    ganti_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'GANTI PELANGGAN')]")
+                    target_ganti = None
+                    for gb in ganti_buttons:
+                        try:
+                            lbl = (gb.text or '').strip().upper()
+                            if 'GANTI' in lbl and 'PELANGGAN' in lbl and gb.is_displayed() and gb.is_enabled():
+                                target_ganti = gb
+                                break
+                        except:
+                            continue
+                    
+                    if target_ganti:
+                        # Langsung klik tanpa debug info yang lambat
+                        try:
+                            target_ganti.click()
+                        except Exception:
+                            driver.execute_script("arguments[0].click();", target_ganti)
+                        # Tidak perlu delay, langsung return
+                        print("✅ 'Ganti Pelanggan' diklik — kembalikan kontrol agar gunakan NIK berikutnya")
+                    else:
+                        print("❌ Tombol 'Ganti Pelanggan' tidak ditemukan")
+                except Exception as e_gp:
+                    print(f"❌ Error saat mencoba klik 'Ganti Pelanggan': {str(e_gp)}")
+
+                # Kembalikan kode khusus agar loop lanjut ke NIK berikutnya tanpa tandai gagal
+                return "RETRY_NEXT_NIK"
+        except Exception:
+            pass
+
+        # 2) Jika ada popup dengan tombol "TUTUP", klik dan kembali ke awal
         try:
             # Langsung cari tombol TUTUP tanpa delay
             tutup_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]")
@@ -570,7 +617,7 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
             print(f"⚠️ Error saat mencari/mengklik tombol TUTUP: {str(e)}")
             pass
 
-        # 2) Jika ada popup NIB dengan tombol "Nanti Saja, Lanjut Transaksi", klik tombol tersebut
+        # 3) Jika ada popup NIB dengan tombol "Nanti Saja, Lanjut Transaksi", klik tombol tersebut
         try:
             # Deteksi popup NIB dengan mencari teks "NIB" atau "Lengkapi NIB"
             nib_detected = False
@@ -630,55 +677,7 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
             print(f"⚠️ Error saat mencari/mengklik popup NIB: {str(e)}")
             pass
 
-        # 3) Jika muncul peringatan: "Tidak dapat transaksi karena telah melebihi batas kewajaran ..."
-        #    maka klik "Ganti Pelanggan" lalu kembalikan False agar loop memakai NIK berikutnya
-        try:
-            # Optimasi: Cek langsung tanpa loop, gunakan selector yang lebih spesifik
-            warning_selectors = [
-                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TIDAK DAPAT TRANSAKSI')]"),
-                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'MELEBIHI BATAS KEWAJARAN')]")
-            ]
-            
-            warning_found = False
-            for how, sel in warning_selectors:
-                if driver.find_elements(how, sel):
-                    warning_found = True
-                    break
-
-            if warning_found:
-                print("⚠️ Deteksi peringatan batas kewajaran — akan klik 'Ganti Pelanggan' dan lanjut ke NIK berikutnya")
-                try:
-                    # Optimasi: Langsung cari tombol Ganti Pelanggan tanpa loop yang tidak perlu
-                    ganti_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'GANTI PELANGGAN')]")
-                    target_ganti = None
-                    for gb in ganti_buttons:
-                        try:
-                            lbl = (gb.text or '').strip().upper()
-                            if 'GANTI' in lbl and 'PELANGGAN' in lbl and gb.is_displayed() and gb.is_enabled():
-                                target_ganti = gb
-                                break
-                        except:
-                            continue
-                    
-                    if target_ganti:
-                        # Langsung klik tanpa debug info yang lambat
-                        try:
-                            target_ganti.click()
-                        except Exception:
-                            driver.execute_script("arguments[0].click();", target_ganti)
-                        # Tidak perlu delay, langsung return
-                        print("✅ 'Ganti Pelanggan' diklik — kembalikan kontrol agar gunakan NIK berikutnya")
-                    else:
-                        print("❌ Tombol 'Ganti Pelanggan' tidak ditemukan")
-                except Exception as e_gp:
-                    print(f"❌ Error saat mencoba klik 'Ganti Pelanggan': {str(e_gp)}")
-
-                # Kembalikan kode khusus agar loop lanjut ke NIK berikutnya tanpa tandai gagal
-                return "RETRY_NEXT_NIK"
-        except Exception:
-            pass
-
-        # 4) Jika tidak ada TUTUP, tidak ada NIB, dan tidak ada Ganti Pelanggan, coba klik CEK PESANAN lagi
+        # 4) Jika tidak ada Ganti Pelanggan, tidak ada TUTUP, dan tidak ada NIB, coba klik CEK PESANAN lagi
         print("✅ Tidak ada popup/error terdeteksi - coba klik CEK PESANAN...")
         try:
             # Coba klik CEK PESANAN setelah handle popup (jika ada)
