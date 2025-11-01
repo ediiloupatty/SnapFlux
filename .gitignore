@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# Project Specific Files
+PENJELASAN_PROJECT.md
+PENJELASAN_PROJECT.txt
+
 # Distribution / packaging
 .Python
 build/
