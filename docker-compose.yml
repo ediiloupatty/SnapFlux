@@ -1,0 +1,32 @@
+# SnapFlux v2.0 - Docker Compose Configuration
+# Untuk menjalankan aplikasi SnapFlux dengan Docker
+
+services:
+  snapflux:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: snapflux-app
+    volumes:
+      # Mount direktori akun untuk file Excel akun dan NIK
+      - ./akun:/app/akun
+      # Mount direktori results untuk output Excel
+      - ./results:/app/results
+      # Mount direktori logs untuk file log
+      - ./logs:/app/logs
+      # Mount file .env jika ada (opsional)
+      - ./.env:/app/.env:ro
+      # Mount config.yaml jika ada
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      # Override environment variables jika diperlukan
+      - HEADLESS_MODE=true
+      - CHROME_BINARY_PATH=/usr/bin/google-chrome
+      - CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    # Restart policy
+    restart: unless-stopped
+
+

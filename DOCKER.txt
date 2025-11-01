@@ -1,0 +1,245 @@
+# SnapFlux v2.0 - Docker Guide
+
+Panduan penggunaan Docker untuk menjalankan aplikasi SnapFlux v2.0.
+
+## Daftar Isi
+
+1. [Persyaratan](#persyaratan)
+2. [Persiapan](#persiapan)
+3. [Membangun Image](#membangun-image)
+4. [Menjalankan dengan Docker](#menjalankan-dengan-docker)
+5. [Menjalankan dengan Docker Compose](#menjalankan-dengan-docker-compose)
+6. [Perubahan yang Diperlukan](#perubahan-yang-diperlukan)
+7. [Troubleshooting](#troubleshooting)
+
+## Persyaratan
+
+- **Docker** versi 20.10 atau lebih baru
+- **Docker Compose** versi 1.29 atau lebih baru (opsional, untuk docker-compose)
+- File `akun/akun.xlsx` harus sudah tersedia di direktori lokal
+
+## Persiapan
+
+### 1. Struktur Direktori
+
+Pastikan struktur direktori Anda seperti ini:
+
+```
+Snapflux v2.0/
+├── akun/
+│   └── akun.xlsx          # File Excel dengan data akun merchant
+├── src/
+├── main.py
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+└── .env                    # (opsional) File environment variables
+```
+
+### 2. File Akun
+
+Pastikan file `akun/akun.xlsx` sudah tersedia. File ini akan di-mount ke dalam container sebagai volume.
+
+### 3. File Environment (Opsional)
+
+Jika Anda menggunakan file `.env`, pastikan sudah dikonfigurasi dengan benar. File ini juga akan di-mount ke dalam container.
+
+## Membangun Image
+
+Untuk membangun Docker image:
+
+```bash
+docker build -t snapflux:v2.0 .
+```
+
+Atau dengan nama yang lebih spesifik:
+
+```bash
+docker build -t snapflux:latest .
+```
+
+## Menjalankan dengan Docker
+
+### Cara 1: Menggunakan Docker Run
+
+```bash
+docker run -it --rm \
+  -v "$(pwd)/akun:/app/akun" \
+  -v "$(pwd)/results:/app/results" \
+  -v "$(pwd)/logs:/app/logs" \
+  -v "$(pwd)/.env:/app/.env:ro" \
+  snapflux:v2.0
+```
+
+**Windows (PowerShell):**
+```powershell
+docker run -it --rm `
+  -v "${PWD}/akun:/app/akun" `
+  -v "${PWD}/results:/app/results" `
+  -v "${PWD}/logs:/app/logs" `
+  -v "${PWD}/.env:/app/.env:ro" `
+  snapflux:v2.0
+```
+
+**Windows (CMD):**
+```cmd
+docker run -it --rm -v "%CD%/akun:/app/akun" -v "%CD%/results:/app/results" -v "%CD%/logs:/app/logs" snapflux:v2.0
+```
+
+### Cara 2: Menggunakan Docker Compose (Direkomendasikan)
+
+```bash
+# Build dan jalankan
+docker compose up
+
+# Atau build terlebih dahulu
+docker compose build
+docker compose run --rm snapflux
+
+# Jalankan di background
+docker compose up -d
+docker compose logs -f
+```
+
+**Windows:**
+```powershell
+docker compose up
+```
+
+## Perubahan yang Diperlukan
+
+### Perubahan pada `src/driver_setup.py`
+
+File `driver_setup.py` telah diupdate untuk mendeteksi environment Docker dan menggunakan Chrome yang sesuai:
+
+- **Di Docker**: Menggunakan system Chrome (`/usr/bin/google-chrome`) dan ChromeDriver (`/usr/local/bin/chromedriver`)
+- **Di Windows Lokal**: Menggunakan Chrome binary dari direktori `chrome/` seperti sebelumnya
+
+Tidak ada perubahan lain yang diperlukan pada kode aplikasi. Semua perubahan dilakukan secara otomatis berdasarkan environment.
+
+### Environment Variables
+
+Dalam Docker, environment variables berikut di-set secara otomatis:
+
+- `CHROME_BINARY_PATH=/usr/bin/google-chrome`
+- `CHROMEDRIVER_PATH=/usr/local/bin/chromedriver`
+- `HEADLESS_MODE=true`
+- `PYTHONUNBUFFERED=1`
+
+Anda dapat override environment variables melalui:
+- File `.env` yang di-mount
+- Docker Compose `environment` section
+- Flag `-e` pada `docker run`
+
+## Volume Mounts
+
+Aplikasi menggunakan volume mounts untuk data persistence:
+
+| Volume Lokal | Volume Container | Deskripsi |
+|-------------|------------------|-----------|
+| `./akun` | `/app/akun` | File Excel akun dan NIK |
+| `./results` | `/app/results` | Output file Excel hasil |
+| `./logs` | `/app/logs` | File log aplikasi |
+| `./.env` | `/app/.env` | Environment variables (read-only) |
+
+## Troubleshooting
+
+### 1. Chrome tidak ditemukan
+
+**Error**: `Chrome binary not found`
+
+**Solusi**: 
+- Pastikan Dockerfile sudah di-build dengan benar
+- Cek apakah Google Chrome terinstall di image: `docker run snapflux:v2.0 google-chrome --version`
+
+### 2. Permission denied pada volume
+
+**Error**: `Permission denied` saat akses file
+
+**Solusi**:
+```bash
+# Pastikan direktori memiliki permission yang benar
+chmod -R 755 akun results logs
+```
+
+**Windows**: Biasanya tidak ada masalah permission.
+
+### 3. File akun tidak ditemukan
+
+**Error**: `FileNotFoundError: akun/akun.xlsx`
+
+**Solusi**:
+- Pastikan file `akun/akun.xlsx` ada di direktori lokal
+- Pastikan volume mount benar: `-v "$(pwd)/akun:/app/akun"`
+
+### 4. Output tidak muncul di terminal
+
+**Solusi**: Gunakan flag `-it` pada `docker run`:
+```bash
+docker run -it --rm ...
+```
+
+Atau dengan Docker Compose, output akan muncul secara otomatis.
+
+### 5. Container langsung exit
+
+**Solusi**:
+- Cek logs: `docker logs <container-id>`
+- Pastikan aplikasi berjalan dengan interaktif: gunakan `-it` atau `stdin_open: true` dan `tty: true` di docker-compose
+
+### 6. Chrome crash atau timeout
+
+**Solusi**:
+- Pastikan ada cukup memory: `docker run --shm-size=2g ...`
+- Atau tambahkan di docker-compose.yml:
+```yaml
+services:
+  snapflux:
+    shm_size: 2gb
+```
+
+## Memeriksa Container
+
+```bash
+# Lihat logs
+docker logs snapflux-app
+
+# Masuk ke container (untuk debugging)
+docker exec -it snapflux-app bash
+
+# Cek proses yang berjalan
+docker exec snapflux-app ps aux
+
+# Cek environment variables
+docker exec snapflux-app env
+```
+
+## Catatan Penting
+
+1. **Data Persistence**: Semua data (akun, results, logs) disimpan di direktori lokal melalui volume mounts
+2. **Headless Mode**: Default berjalan dalam mode headless di Docker (tidak ada GUI)
+3. **Resource Usage**: Docker container mungkin menggunakan lebih banyak resource daripada versi lokal
+4. **Network**: Container memiliki akses internet untuk login ke platform merchant
+5. **Windows Path**: Gunakan path format Windows saat mount volume di Windows
+
+## Quick Start
+
+```bash
+# 1. Pastikan file akun tersedia
+ls akun/akun.xlsx
+
+# 2. Build image
+docker compose build
+
+# 3. Jalankan
+docker compose up
+
+# Atau dengan satu command
+docker compose up --build
+```
+
+## Referensi
+
+- [Docker Documentation](https://docs.docker.com/)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [Selenium Docker Images](https://github.com/SeleniumHQ/docker-selenium)

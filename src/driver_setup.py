@@ -19,18 +19,75 @@ logger = logging.getLogger('driver_setup')
 CHROME_BINARY = r"D:\edi\Programing\Snapflux v2\chrome\Chromium\bin\chrome.exe"      # Path ke executable Chrome
 CHROMEDRIVER_PATH = r"D:\edi\Programing\Snapflux v2\chrome\chromedriver.exe"         # Path ke ChromeDriver executable
 
+# Docker environment detection
+def is_docker_environment():
+    """
+    Deteksi apakah aplikasi berjalan di Docker container
+    
+    Returns:
+        bool: True jika berjalan di Docker, False jika tidak
+    """
+    # Cek beberapa indikator environment Docker
+    docker_indicators = []
+    
+    # Cek file .dockerenv (paling reliable)
+    if os.path.exists('/.dockerenv'):
+        docker_indicators.append(True)
+    
+    # Cek environment variable
+    if os.environ.get('DOCKER_CONTAINER') == 'true':
+        docker_indicators.append(True)
+    
+    # Cek cgroup (jika ada)
+    try:
+        if os.path.exists('/proc/1/cgroup'):
+            with open('/proc/1/cgroup', 'r') as f:
+                cgroup_content = f.read()
+                if 'docker' in cgroup_content or 'containerd' in cgroup_content:
+                    docker_indicators.append(True)
+    except (IOError, PermissionError):
+        pass  # Ignore jika tidak bisa dibaca
+    
+    return any(docker_indicators)
+
 # Enhanced configuration support (backward compatible)
 try:
     from .config_manager import config_manager
     def get_chrome_binary():
-        return config_manager.get('chrome_binary', CHROME_BINARY)
+        # Jika di Docker, gunakan system Chrome
+        if is_docker_environment():
+            docker_chrome = os.environ.get('CHROME_BINARY_PATH', '/usr/bin/google-chrome')
+            if os.path.exists(docker_chrome):
+                return docker_chrome
+        # Gunakan dari config atau environment variable
+        return config_manager.get('chrome_binary', os.environ.get('CHROME_BINARY_PATH', CHROME_BINARY))
+    
     def get_chromedriver_path():
-        return config_manager.get('chromedriver_path', CHROMEDRIVER_PATH)
+        # Jika di Docker, gunakan system ChromeDriver
+        if is_docker_environment():
+            docker_chromedriver = os.environ.get('CHROMEDRIVER_PATH', '/usr/local/bin/chromedriver')
+            if os.path.exists(docker_chromedriver):
+                return docker_chromedriver
+        # Gunakan dari config atau environment variable
+        return config_manager.get('chromedriver_path', os.environ.get('CHROMEDRIVER_PATH', CHROMEDRIVER_PATH))
 except ImportError:
     def get_chrome_binary():
-        return CHROME_BINARY
+        # Jika di Docker, gunakan system Chrome
+        if is_docker_environment():
+            docker_chrome = os.environ.get('CHROME_BINARY_PATH', '/usr/bin/google-chrome')
+            if os.path.exists(docker_chrome):
+                return docker_chrome
+        # Gunakan dari environment variable atau default
+        return os.environ.get('CHROME_BINARY_PATH', CHROME_BINARY)
+    
     def get_chromedriver_path():
-        return CHROMEDRIVER_PATH
+        # Jika di Docker, gunakan system ChromeDriver
+        if is_docker_environment():
+            docker_chromedriver = os.environ.get('CHROMEDRIVER_PATH', '/usr/local/bin/chromedriver')
+            if os.path.exists(docker_chromedriver):
+                return docker_chromedriver
+        # Gunakan dari environment variable atau default
+        return os.environ.get('CHROMEDRIVER_PATH', CHROMEDRIVER_PATH)
 
 def setup_driver(headless=False):
     """
@@ -46,6 +103,12 @@ def setup_driver(headless=False):
         Exception: Jika terjadi error saat setup driver
     """
     print("🚀 Setting up Chrome WebDriver dengan optimasi performa...")
+    
+    # Informasi environment
+    if is_docker_environment():
+        print("🐳 Detected: Running in Docker container")
+    else:
+        print("💻 Detected: Running in local environment")
     
     try:
         # Buat object ChromeOptions untuk mengatur setting browser

@@ -6,9 +6,6 @@ __pycache__/
 # C extensions
 *.so
 
-# Project Specific Files
-PENJELASAN_PROJECT.md
-PENJELASAN_PROJECT.txt
 
 # Distribution / packaging
 .Python
@@ -180,10 +177,18 @@ chrome_debug.log
 results/
 *.xlsx
 *.csv
+# Allow example/template Excel files
+!*example*.xlsx
+!*template*.xlsx
+!*.xlsx.example
 
 # Account data (contains sensitive information)
 akun/
-*.xlsx
+akun/*.xlsx
+# Allow example/template files in akun folder
+!akun/*example*.xlsx
+!akun/*template*.xlsx
+!akun/*.xlsx.example
 
 # Browser profiles and cache
 chrome_profile/
@@ -230,6 +235,20 @@ screenshots/
 *.jpg
 *.jpeg
 *.gif
+
+# Docker files and build artifacts
+# =================================
+# Docker build cache (keep Dockerfile and docker-compose.yml)
+.docker/
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.yml
+
+# Docker volumes and data
+.docker-data/
+
+# Temporary Docker files
+*.dockerignore.bak
 
 # OS generated files
 # =================

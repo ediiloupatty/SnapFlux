@@ -1,0 +1,59 @@
+# SnapFlux v2.0 - Docker Ignore File
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs dan hasil (akan di-mount sebagai volume)
+logs/*.log
+results/*.xlsx
+
+# Chrome binary lokal (tidak diperlukan di Docker)
+chrome/
+
+# Dokumentasi (tidak diperlukan di image)
+*.md
+README.md
+PENJELASAN_PROGRAM.md
+PENJELASAN_PROGRAM.txt
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+LICENSE
+
+# Test files
+tests/
+.pytest_cache/
+
+# Docker files sendiri
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+
