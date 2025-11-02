@@ -496,123 +496,316 @@ def fill_nik_form_and_continue(driver, nik_list, start_index=0):
                 print(f"✅ CEK PESANAN berhasil diklik langsung - lanjutkan proses (waktu: {cek_elapsed:.2f} detik)")
                 return True
             else:
-                print(f"⚠️ CEK PESANAN tidak ditemukan atau gagal - akan cek popup dulu (waktu: {cek_elapsed:.2f} detik)")
+                print(f"⚠️ CEK PESANAN tidak ditemukan atau gagal - langsung cek TUTUP (waktu: {cek_elapsed:.2f} detik)")
+                # Langsung skip ke TUTUP tanpa delay
         except Exception as e:
             cek_elapsed = time_module.time() - cek_start_time
-            print(f"⚠️ Error saat mencoba klik CEK PESANAN: {str(e)} - akan cek popup dulu (waktu: {cek_elapsed:.2f} detik)")
+            print(f"⚠️ Error saat mencoba klik CEK PESANAN: {str(e)} - langsung cek TUTUP (waktu: {cek_elapsed:.2f} detik)")
+            # Langsung skip ke TUTUP tanpa delay
         
-        # Jika CEK PESANAN gagal, cek popup (Ganti Pelanggan PRIORITAS, lalu TUTUP, lalu NIB)
-        # 1) PRIORITAS: Cek "Ganti Pelanggan" (batas kewajaran) DULU sebelum TUTUP
+        # Jika CEK PESANAN gagal, langsung cek TUTUP tanpa delay
         try:
-            # Optimasi: Cek langsung tanpa loop, gunakan selector yang lebih spesifik
-            warning_selectors = [
-                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TIDAK DAPAT TRANSAKSI')]"),
-                (By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'MELEBIHI BATAS KEWAJARAN')]")
+            # Optimasi: Cari tombol TUTUP dengan selector yang lebih cepat dan spesifik
+            target_tutup = None
+            tutup_start_time = time_module.time()
+            max_tutup_time = 0.5  # Maksimal 0.5 detik untuk mencari TUTUP
+            
+            # Prioritaskan selector yang lebih cepat (handle whitespace, nested text, dan case-insensitive)
+            fast_selectors = [
+                # Exact match dengan normalize-space (case-insensitive)
+                (By.XPATH, "//button[translate(normalize-space(text()), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')='TUTUP']"),  # Exact match normalized (prioritas 1)
+                (By.XPATH, "//button[normalize-space(text())='TUTUP' or normalize-space(text())='Tutup' or normalize-space(text())='tutup']"),  # Variasi case (prioritas 2)
+                # Contains dengan normalize-space
+                (By.XPATH, "//button[contains(translate(normalize-space(.), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]"),  # Contains normalized (prioritas 3)
+                # Link dengan variasi yang sama
+                (By.XPATH, "//a[translate(normalize-space(text()), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')='TUTUP']"),  # Link exact match (prioritas 4)
+                (By.XPATH, "//a[normalize-space(text())='TUTUP' or normalize-space(text())='Tutup' or normalize-space(text())='tutup']"),  # Link variasi case (prioritas 5)
+                (By.XPATH, "//a[contains(translate(normalize-space(.), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]"),  # Link contains (prioritas 6)
+                # Role button
+                (By.XPATH, "//*[@role='button' and contains(translate(normalize-space(.), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]"),  # Role button (prioritas 7)
+                # Fallback: cari semua button/link yang mengandung TUTUP (case-insensitive, normalize-space)
+                (By.XPATH, "//*[self::button or self::a or @role='button'][contains(translate(normalize-space(.), 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]"),  # Semua button/link (prioritas 8)
             ]
             
-            warning_found = False
-            for how, sel in warning_selectors:
-                if driver.find_elements(how, sel):
-                    warning_found = True
+            print(f"🔍 Mencari tombol TUTUP dengan {len(fast_selectors)} selector...")
+            
+            # Coba selector cepat terlebih dahulu
+            for idx, (selector_type, selector_value) in enumerate(fast_selectors, 1):
+                # Cek timeout sebelum setiap selector
+                elapsed = time_module.time() - tutup_start_time
+                if elapsed >= max_tutup_time:
+                    print(f"  ⏱️ Timeout tercapai saat selector #{idx}")
                     break
-
-            if warning_found:
-                print("⚠️ Deteksi peringatan batas kewajaran — akan klik 'Ganti Pelanggan' dan lanjut ke NIK berikutnya")
+                    
                 try:
-                    # Optimasi: Langsung cari tombol Ganti Pelanggan tanpa loop yang tidak perlu
-                    ganti_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'GANTI PELANGGAN')]")
-                    target_ganti = None
-                    for gb in ganti_buttons:
+                    selector_attempt_start = time_module.time()
+                    elements = driver.find_elements(selector_type, selector_value)
+                    selector_attempt_elapsed = time_module.time() - selector_attempt_start
+                    elements_count = len(elements)
+                    print(f"  🔍 Selector #{idx}: menemukan {elements_count} elemen (waktu: {selector_attempt_elapsed:.3f}s)")
+                    
+                    for btn_idx, btn in enumerate(elements, 1):
+                        # Cek timeout di dalam loop juga
+                        elapsed = time_module.time() - tutup_start_time
+                        if elapsed >= max_tutup_time:
+                            break
+                            
                         try:
-                            lbl = (gb.text or '').strip().upper()
-                            if 'GANTI' in lbl and 'PELANGGAN' in lbl and gb.is_displayed() and gb.is_enabled():
-                                target_ganti = gb
-                                break
-                        except:
+                            # Ambil text langsung dari button menggunakan JavaScript untuk menghindari nested text
+                            # Gunakan textContent yang hanya mengambil text node langsung, bukan dari child elements
+                            button_direct_text = driver.execute_script("""
+                                var el = arguments[0];
+                                // Ambil textContent yang hanya mengambil text langsung dari element ini
+                                var directText = '';
+                                if (el.childNodes) {
+                                    for (var i = 0; i < el.childNodes.length; i++) {
+                                        if (el.childNodes[i].nodeType === 3) { // Text node
+                                            directText += el.childNodes[i].textContent || '';
+                                        }
+                                    }
+                                }
+                                // Jika tidak ada text node langsung, coba innerText sebagai fallback
+                                if (!directText || directText.trim() === '') {
+                                    directText = el.innerText || el.textContent || '';
+                                }
+                                return directText.trim();
+                            """, btn) or ''
+                            
+                            # Fallback: gunakan .text jika JavaScript gagal
+                            if not button_direct_text:
+                                button_direct_text = btn.text or ''
+                            
+                            normalized_text = button_direct_text.strip().upper()
+                            full_text = btn.text or ''  # Untuk debug saja
+                            
+                            # Cek visible dan enabled
+                            if btn.is_displayed() and btn.is_enabled():
+                                # Cek apakah text mengandung TUTUP atau exact match setelah normalize
+                                if 'TUTUP' in normalized_text:
+                                    # Untuk button dengan banyak nested text, cek apakah text langsung adalah "TUTUP" atau sangat pendek
+                                    # Juga terima jika text langsung < 15 chars (lebih longgar untuk button di dalam modal dengan banyak text)
+                                    # Atau jika text dimulai/berakhir dengan "TUTUP"
+                                    text_length = len(normalized_text)
+                                    is_exact_match = normalized_text == 'TUTUP'
+                                    is_short_text = text_length < 15
+                                    starts_with_tutup = normalized_text.startswith('TUTUP')
+                                    ends_with_tutup = normalized_text.endswith('TUTUP')
+                                    
+                                    # Terima jika exact match, atau text pendek, atau text yang dimulai/diakhiri dengan TUTUP
+                                    if is_exact_match or is_short_text or starts_with_tutup or ends_with_tutup:
+                                        target_tutup = btn
+                                        elapsed = time_module.time() - tutup_start_time
+                                        print(f"  ✅ Element #{btn_idx} cocok!")
+                                        print(f"     Text langsung: '{button_direct_text[:100]}...' (length: {len(button_direct_text)})")
+                                        print(f"     Text normalized: '{normalized_text}'")
+                                        print(f"     Match reason: exact={is_exact_match}, short={is_short_text}, starts={starts_with_tutup}, ends={ends_with_tutup}")
+                                        print(f"✅ Tombol TUTUP ditemukan dengan selector #{idx} (waktu: {elapsed:.2f} detik)")
+                                        break
+                                    else:
+                                        print(f"  ⚠️ Element #{btn_idx} mengandung TUTUP tapi tidak memenuhi kriteria: '{normalized_text[:50]}...' (length: {text_length}, skip)")
+                                else:
+                                    print(f"  ⚠️ Element #{btn_idx} tidak mengandung TUTUP: '{normalized_text[:50]}...'")
+                            else:
+                                print(f"  ⚠️ Element #{btn_idx} tidak displayed/enabled: '{normalized_text[:50]}...'")
+                        except Exception as btn_e:
+                            print(f"  ⚠️ Error saat cek element #{btn_idx}: {str(btn_e)[:50]}")
                             continue
                     
-                    if target_ganti:
-                        # Langsung klik tanpa debug info yang lambat
-                        try:
-                            target_ganti.click()
-                        except Exception:
-                            driver.execute_script("arguments[0].click();", target_ganti)
-                        # Tidak perlu delay, langsung return
-                        print("✅ 'Ganti Pelanggan' diklik — kembalikan kontrol agar gunakan NIK berikutnya")
-                    else:
-                        print("❌ Tombol 'Ganti Pelanggan' tidak ditemukan")
-                except Exception as e_gp:
-                    print(f"❌ Error saat mencoba klik 'Ganti Pelanggan': {str(e_gp)}")
-
-                # Kembalikan kode khusus agar loop lanjut ke NIK berikutnya tanpa tandai gagal
-                return "RETRY_NEXT_NIK"
-        except Exception:
-            pass
-
-        # 2) Jika ada popup dengan tombol "TUTUP", klik dan kembali ke awal
-        try:
-            # Langsung cari tombol TUTUP tanpa delay
-            tutup_buttons = driver.find_elements(By.XPATH, "//*[self::button or self::a][contains(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'TUTUP')]")
+                    if target_tutup:
+                        break
+                except Exception as sel_e:
+                    selector_attempt_elapsed = time_module.time() - selector_attempt_start
+                    print(f"  ❌ Selector #{idx} error (waktu: {selector_attempt_elapsed:.3f}s): {str(sel_e)[:80]}")
+                    continue
             
-            if tutup_buttons:
-                print(f"🪟 Popup terdeteksi — menemukan {len(tutup_buttons)} tombol TUTUP, akan klik yang pertama...")
-                
-                # Cari tombol TUTUP yang paling relevan (visible dan enabled)
-                target_tutup = None
-                for btn in tutup_buttons:
-                    label = (btn.text or '').strip().upper()
+            # Fallback tambahan: Cari button di dalam modal/dialog yang mungkin berada di bagian bawah
+            if not target_tutup:
+                elapsed = time_module.time() - tutup_start_time
+                if elapsed < max_tutup_time:
                     try:
-                        if 'TUTUP' in label and btn.is_displayed() and btn.is_enabled():
-                            target_tutup = btn
-                            print(f"✅ Tombol TUTUP ditemukan: '{label}'")
-                            break
-                    except:
-                        continue
-                
-                if target_tutup:
-                    print("🚀 Mengklik tombol TUTUP...")
-                    clicked = False
-                    
-                    # Coba klik dengan beberapa metode
-                    for attempt in range(3):
-                        try:
-                            if attempt == 0:
-                                # Coba normal click
-                                target_tutup.click()
-                            elif attempt == 1:
-                                # Coba JavaScript click
-                                driver.execute_script("arguments[0].click();", target_tutup)
-                            else:
-                                # Coba scroll into view lalu click (tanpa delay)
-                                driver.execute_script("arguments[0].scrollIntoView(true);", target_tutup)
-                                target_tutup.click()
-                            
-                            clicked = True
-                            print(f"✅ Tombol TUTUP berhasil diklik (attempt {attempt + 1})")
-                            break
-                        except Exception as e:
-                            if attempt < 2:
-                                print(f"⚠️ Attempt {attempt + 1} gagal, mencoba lagi...")
-                            else:
-                                print(f"❌ Semua attempt gagal: {str(e)}")
-                    
-                    if clicked:
-                        # Langsung klik ulang Catat Penjualan tanpa delay setelah klik TUTUP
-                        print("🔄 Klik ulang 'Catat Penjualan' setelah TUTUP...")
-                        try:
-                            from .navigation_handler import click_catat_penjualan_direct
-                            catat_reopen = click_catat_penjualan_direct(driver)
-                            if catat_reopen:
-                                print("✅ Berhasil klik ulang Catat Penjualan setelah TUTUP")
-                            else:
-                                print("⚠️ Gagal klik ulang Catat Penjualan, tapi akan lanjut")
-                        except Exception as e_reopen:
-                            print(f"⚠️ Error saat klik ulang Catat Penjualan: {str(e_reopen)}")
+                        print(f"  🔄 Mencoba mencari TUTUP di modal/dialog (fallback 2)...")
+                        # Cari button di dalam modal, dialog, atau popup yang biasanya berada di bagian bawah
+                        modal_selectors = [
+                            (By.XPATH, "//div[contains(@class, 'modal') or contains(@class, 'dialog') or contains(@class, 'popup')]//button"),
+                            (By.XPATH, "//div[@role='dialog']//button"),
+                            (By.XPATH, "//div[contains(@class, 'mantine-Modal')]//button"),
+                        ]
+                        for modal_sel_type, modal_sel_value in modal_selectors:
+                            try:
+                                modal_buttons = driver.find_elements(modal_sel_type, modal_sel_value)
+                                # Ambil button yang kemungkinan besar adalah TUTUP (biasanya yang terakhir atau di bagian bawah)
+                                for modal_btn in reversed(modal_buttons):  # Mulai dari yang terakhir
+                                    if modal_btn.is_displayed() and modal_btn.is_enabled():
+                                        # Cek text langsung dengan JavaScript
+                                        btn_direct_text = driver.execute_script("""
+                                            var el = arguments[0];
+                                            var directText = '';
+                                            if (el.childNodes) {
+                                                for (var i = 0; i < el.childNodes.length; i++) {
+                                                    if (el.childNodes[i].nodeType === 3) {
+                                                        directText += el.childNodes[i].textContent || '';
+                                                    }
+                                                }
+                                            }
+                                            if (!directText || directText.trim() === '') {
+                                                directText = el.innerText || el.textContent || '';
+                                            }
+                                            return directText.trim().toUpperCase();
+                                        """, modal_btn) or ''
+                                        
+                                        if 'TUTUP' in btn_direct_text and (btn_direct_text == 'TUTUP' or len(btn_direct_text) < 15 or btn_direct_text.startswith('TUTUP') or btn_direct_text.endswith('TUTUP')):
+                                            target_tutup = modal_btn
+                                            elapsed = time_module.time() - tutup_start_time
+                                            print(f"  ✅ Tombol TUTUP ditemukan di modal (waktu: {elapsed:.2f} detik)")
+                                            break
+                                if target_tutup:
+                                    break
+                            except:
+                                continue
+                    except Exception as modal_e:
+                        print(f"  ⚠️ Error saat mencari TUTUP di modal: {str(modal_e)[:50]}")
+            
+            # Fallback: Gunakan JavaScript untuk mencari dan klik langsung tombol TUTUP
+            if not target_tutup:
+                elapsed = time_module.time() - tutup_start_time
+                if elapsed < max_tutup_time:
+                    try:
+                        print(f"  🔄 Mencoba JavaScript fallback untuk mencari TUTUP...")
+                        # Gunakan JavaScript untuk mencari semua button dan cek text-nya, return info untuk dicari lagi
+                        tutup_info = driver.execute_script("""
+                            var buttons = document.querySelectorAll('button, a, [role="button"]');
+                            var results = [];
+                            for (var i = 0; i < buttons.length; i++) {
+                                var btn = buttons[i];
+                                
+                                // Ambil text langsung dari button (hanya text node langsung, bukan nested)
+                                var directText = '';
+                                if (btn.childNodes) {
+                                    for (var j = 0; j < btn.childNodes.length; j++) {
+                                        if (btn.childNodes[j].nodeType === 3) { // Text node
+                                            directText += btn.childNodes[j].textContent || '';
+                                        }
+                                    }
+                                }
+                                // Fallback ke innerText jika tidak ada text node langsung
+                                if (!directText || directText.trim() === '') {
+                                    directText = btn.innerText || btn.textContent || '';
+                                }
+                                
+                                var text = directText.trim();
+                                var textUpper = text.toUpperCase();
+                                var textLength = text.length;
+                                
+                                // Cek visibility
+                                var style = window.getComputedStyle(btn);
+                                var isVisible = style.display !== 'none' && 
+                                               style.visibility !== 'hidden' && 
+                                               style.opacity !== '0' &&
+                                               !btn.disabled;
+                                
+                                if (isVisible && textUpper.includes('TUTUP')) {
+                                    // Prioritaskan exact match, text pendek, atau yang dimulai/diakhiri dengan TUTUP
+                                    var isExactMatch = textUpper === 'TUTUP';
+                                    var isShortText = textLength < 15;
+                                    var startsWithTutup = textUpper.indexOf('TUTUP') === 0;
+                                    var endsWithTutup = textUpper.lastIndexOf('TUTUP') === (textLength - 5);
+                                    
+                                    if (isExactMatch || isShortText || startsWithTutup || endsWithTutup) {
+                                        // Coba ambil id, class, atau attributes untuk selector
+                                        var id = btn.id || '';
+                                        var classes = btn.className || '';
+                                        var tagName = btn.tagName.toLowerCase();
+                                        results.push({
+                                            text: text,
+                                            textUpper: textUpper,
+                                            id: id,
+                                            classes: classes,
+                                            tagName: tagName,
+                                            index: i
+                                        });
+                                    }
+                                }
+                            }
+                            return results;
+                        """)
                         
-                        print("✅ Popup TUTUP diklik dan Catat Penjualan sudah dibuka lagi - siap untuk NIK berikutnya")
-                        return "REOPENED_AFTER_TUTUP"
-                    else:
-                        print("❌ Gagal mengklik tombol TUTUP setelah semua attempt")
+                        if tutup_info:
+                            print(f"  🪟 JavaScript menemukan {len(tutup_info)} kandidat tombol TUTUP")
+                            for info in tutup_info:
+                                elapsed = time_module.time() - tutup_start_time
+                                if elapsed >= max_tutup_time:
+                                    break
+                                try:
+                                    # Coba cari element berdasarkan info yang didapat
+                                    search_selectors = []
+                                    if info['id']:
+                                        search_selectors.append(f"//{info['tagName']}[@id='{info['id']}']")
+                                    if info['classes']:
+                                        # Ambil class pertama
+                                        first_class = info['classes'].split()[0] if info['classes'] else None
+                                        if first_class:
+                                            search_selectors.append(f"//{info['tagName']}[contains(@class, '{first_class}')]")
+                                    # Fallback: cari dengan text
+                                    search_selectors.append(f"//{info['tagName']}[normalize-space(.)='{info['text'].strip()}']")
+                                    
+                                    for search_sel in search_selectors:
+                                        try:
+                                            found_btn = driver.find_element(By.XPATH, search_sel)
+                                            if found_btn.is_displayed() and found_btn.is_enabled():
+                                                target_tutup = found_btn
+                                                elapsed = time_module.time() - tutup_start_time
+                                                print(f"✅ Tombol TUTUP ditemukan dengan JavaScript fallback (waktu: {elapsed:.2f} detik): '{info['textUpper']}'")
+                                                break
+                                        except:
+                                            continue
+                                    
+                                    if target_tutup:
+                                        break
+                                except:
+                                    continue
+                    except Exception as js_e:
+                        print(f"  ⚠️ JavaScript fallback error: {str(js_e)[:80]}")
+            
+            if target_tutup:
+                print("🚀 Mengklik tombol TUTUP...")
+                clicked = False
+                
+                # Coba klik dengan beberapa metode (prioritaskan yang cepat)
+                for attempt in range(2):  # Kurangi dari 3 ke 2 attempt untuk lebih cepat
+                    try:
+                        if attempt == 0:
+                            # Coba normal click (paling cepat)
+                            target_tutup.click()
+                        else:
+                            # Fallback: JavaScript click (jika normal click gagal)
+                            driver.execute_script("arguments[0].click();", target_tutup)
+                        
+                        clicked = True
+                        print(f"✅ Tombol TUTUP berhasil diklik (attempt {attempt + 1})")
+                        break
+                    except Exception as e:
+                        if attempt == 0:
+                            print(f"⚠️ Normal click gagal, mencoba JavaScript click...")
+                        else:
+                            print(f"❌ Gagal mengklik tombol TUTUP: {str(e)}")
+                
+                if clicked:
+                    # Langsung klik ulang Catat Penjualan tanpa delay setelah klik TUTUP
+                    print("🔄 Klik ulang 'Catat Penjualan' setelah TUTUP...")
+                    try:
+                        from .navigation_handler import click_catat_penjualan_direct
+                        catat_reopen = click_catat_penjualan_direct(driver)
+                        if catat_reopen:
+                            print("✅ Berhasil klik ulang Catat Penjualan setelah TUTUP")
+                        else:
+                            print("⚠️ Gagal klik ulang Catat Penjualan, tapi akan lanjut")
+                    except Exception as e_reopen:
+                        print(f"⚠️ Error saat klik ulang Catat Penjualan: {str(e_reopen)}")
+                    
+                    print("✅ Popup TUTUP diklik dan Catat Penjualan sudah dibuka lagi - siap untuk NIK berikutnya")
+                    return "REOPENED_AFTER_TUTUP"
+                else:
+                    print("❌ Gagal mengklik tombol TUTUP setelah semua attempt")
         except Exception as e:
             print(f"⚠️ Error saat mencari/mengklik tombol TUTUP: {str(e)}")
             pass
@@ -718,8 +911,12 @@ def click_cek_pesanan(driver):
         ]
 
         target = None
-        max_total_time = 1.5  # Maksimal total waktu pencarian: 1.5 detik (dipercepat)
+        max_total_time = 0.8  # Maksimal total waktu pencarian: 0.8 detik (dipercepat lagi)
+        selector_index = 0
         for how, value, use_wait in candidate_selectors:
+            selector_index += 1
+            selector_start_time = time_module.time()
+            
             # Cek waktu total, jika sudah melewati batas, langsung stop dan return
             elapsed_time = time_module.time() - start_time
             if elapsed_time >= max_total_time:
@@ -729,63 +926,133 @@ def click_cek_pesanan(driver):
                 return False  # Langsung return, skip debug info yang lambat
                 
             try:
+                selector_type = "WebDriverWait" if use_wait else "find_elements"
+                print(f"🔍 Selector #{selector_index} ({selector_type}): Mencoba selector {how}...")
+                
                 # Coba dengan explicit wait (untuk selector berbasis text)
                 if use_wait:
                     try:
                         # Hitung sisa waktu yang tersedia
                         remaining_time = max_total_time - (time_module.time() - start_time)
-                        if remaining_time <= 0.1:
-                            # Tidak ada waktu tersisa (kurang dari 0.1 detik), skip selector ini
+                        if remaining_time <= 0.05:
+                            # Tidak ada waktu tersisa (kurang dari 0.05 detik), skip selector ini
+                            print(f"  ⚠️ Skip selector #{selector_index}: tidak ada waktu tersisa (remaining: {remaining_time:.3f}s)")
                             continue
                         
-                        # Gunakan wait yang sesuai dengan sisa waktu (maksimal 0.5 detik untuk cepat)
-                        wait_timeout = min(0.5, max(0.1, remaining_time - 0.1))  # Kurangi 0.1 untuk margin
+                        # Gunakan wait yang sesuai dengan sisa waktu (maksimal 0.3 detik untuk cepat)
+                        wait_timeout = min(0.3, max(0.05, remaining_time - 0.05))  # Kurangi 0.05 untuk margin
+                        print(f"  ⏱️ WebDriverWait timeout: {wait_timeout:.3f} detik (remaining time: {remaining_time:.3f}s)")
+                        
                         wait_remaining = WebDriverWait(driver, wait_timeout)
-                        # Gunakan visibility_of_element_located untuk memastikan tombol benar-benar visible
-                        wait_remaining.until(EC.visibility_of_element_located((how, value)))
+                        wait_result = None
+                        try:
+                            # Gunakan presence_of_element_located (lebih cepat dari visibility)
+                            wait_remaining.until(EC.presence_of_element_located((how, value)))
+                            wait_result = "SUCCESS"
+                            wait_elapsed = time_module.time() - selector_start_time
+                            print(f"  ✅ WebDriverWait berhasil menemukan elemen (waktu: {wait_elapsed:.3f}s)")
+                        except Exception as wait_e:
+                            wait_result = f"TIMEOUT: {str(wait_e)[:50]}"
+                            wait_elapsed = time_module.time() - selector_start_time
+                            print(f"  ❌ WebDriverWait gagal (waktu: {wait_elapsed:.3f}s) - {wait_result}")
+                            continue
+                        
+                        # Cari elemen setelah wait berhasil
                         elements = driver.find_elements(how, value)
-                        for el in elements:
-                            label = (el.text or "").strip().upper()
+                        elements_count = len(elements)
+                        find_elapsed = time_module.time() - selector_start_time
+                        print(f"  🔍 find_elements: menemukan {elements_count} elemen (waktu: {find_elapsed:.3f}s)")
+                        
+                        for idx, el in enumerate(elements):
                             try:
+                                label = (el.text or "").strip().upper()
                                 if "CEK" in label and "PESANAN" in label:
                                     if el.is_displayed():
+                                        # Dapatkan posisi button
+                                        try:
+                                            location = el.location
+                                            size = el.size
+                                            position_info = f"x:{location['x']}, y:{location['y']}, width:{size['width']}, height:{size['height']}"
+                                        except:
+                                            position_info = "tidak dapat diambil"
+                                        
                                         target = el
-                                        print(f"✅ Tombol CEK PESANAN ditemukan dengan selector: {value[:50]}...")
+                                        selector_elapsed = time_module.time() - selector_start_time
+                                        print(f"  ✅ Element #{idx+1} cocok! Label: '{label}'")
+                                        print(f"  📍 Posisi button: {position_info}")
+                                        print(f"  ✅ Tombol CEK PESANAN ditemukan dengan selector #{selector_index} ({selector_type}) - waktu: {selector_elapsed:.3f}s")
                                         break
-                            except Exception:
+                                    else:
+                                        print(f"  ⚠️ Element #{idx+1} tidak displayed: '{label}'")
+                                else:
+                                    print(f"  ⚠️ Element #{idx+1} tidak cocok: label='{label[:30]}...'")
+                            except Exception as el_e:
+                                print(f"  ⚠️ Error saat cek element #{idx+1}: {str(el_e)[:50]}")
                                 continue
                         if target:
                             break
-                    except Exception:
+                    except Exception as wait_err:
                         # Jika explicit wait gagal, skip selector ini
+                        wait_elapsed = time_module.time() - selector_start_time
+                        print(f"  ❌ Selector #{selector_index} gagal (waktu: {wait_elapsed:.3f}s): {str(wait_err)[:80]}")
                         continue
                 else:
                     # Langsung find_elements tanpa wait (untuk XPath langsung)
                     elements = driver.find_elements(how, value)
-                    for el in elements:
-                        label = (el.text or "").strip().upper()
+                    elements_count = len(elements)
+                    find_elapsed = time_module.time() - selector_start_time
+                    print(f"  🔍 find_elements: menemukan {elements_count} elemen (waktu: {find_elapsed:.3f}s)")
+                    
+                    for idx, el in enumerate(elements):
                         try:
+                            label = (el.text or "").strip().upper()
                             if "CEK" in label and "PESANAN" in label:
                                 if el.is_displayed():
+                                    # Dapatkan posisi button
+                                    try:
+                                        location = el.location
+                                        size = el.size
+                                        position_info = f"x:{location['x']}, y:{location['y']}, width:{size['width']}, height:{size['height']}"
+                                    except:
+                                        position_info = "tidak dapat diambil"
+                                    
                                     target = el
-                                    print(f"✅ Tombol CEK PESANAN ditemukan dengan selector: {value[:50]}...")
+                                    selector_elapsed = time_module.time() - selector_start_time
+                                    print(f"  ✅ Element #{idx+1} cocok! Label: '{label}'")
+                                    print(f"  📍 Posisi button: {position_info}")
+                                    print(f"  ✅ Tombol CEK PESANAN ditemukan dengan selector #{selector_index} ({selector_type}) - waktu: {selector_elapsed:.3f}s")
                                     break
-                        except Exception:
+                                else:
+                                    print(f"  ⚠️ Element #{idx+1} tidak displayed: '{label}'")
+                            else:
+                                print(f"  ⚠️ Element #{idx+1} tidak cocok: label='{label[:30]}...'")
+                        except Exception as el_e:
+                            print(f"  ⚠️ Error saat cek element #{idx+1}: {str(el_e)[:50]}")
                             continue
                     if target:
                         break
             except Exception as e:
+                selector_elapsed = time_module.time() - selector_start_time
+                print(f"  ❌ Selector #{selector_index} error (waktu: {selector_elapsed:.3f}s): {str(e)[:80]}")
                 continue
 
         elapsed_time = time_module.time() - start_time
         
         if not target:
-            print(f"❌ Tombol CEK PESANAN tidak ditemukan setelah mencoba semua selector (waktu: {elapsed_time:.2f} detik) - lanjut ke flow popup")
-            # Skip debug info yang lambat untuk mempercepat proses
-            # Debug info hanya akan ditampilkan jika diperlukan untuk troubleshooting
+            print(f"❌ Tombol CEK PESANAN tidak ditemukan setelah mencoba {selector_index} selector (waktu: {elapsed_time:.2f} detik) - lanjut ke flow popup")
             return False
 
+        # Debug: Ambil informasi posisi dan detail button
         try:
+            location = target.location
+            size = target.size
+            rect = target.rect
+            print(f"📍 POSISI BUTTON CEK PESANAN:")
+            print(f"   - Koordinat (x, y): ({location['x']}, {location['y']})")
+            print(f"   - Ukuran (width, height): ({size['width']}, {size['height']})")
+            print(f"   - Rect: {rect}")
+            
+            # Ambil XPath dan CSS untuk debugging
             xpath = driver.execute_script("""
                 function absoluteXPath(el){
                   if(el.id) return '//*[@id="'+el.id+'"]';
@@ -801,41 +1068,58 @@ def click_cek_pesanan(driver):
             """, target)
             print(f"🔗 CEK PESANAN XPath: {xpath}")
             print(f"🔗 CEK PESANAN CSS: {css}")
-        except Exception:
-            pass
+        except Exception as debug_err:
+            print(f"⚠️ Error saat ambil debug info button: {str(debug_err)[:80]}")
         
         # Pastikan tombol visible dan dapat diklik
         try:
-            # Scroll ke tombol jika perlu
+            # Scroll ke tombol jika perlu (tanpa delay)
             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", target)
-            time.sleep(0.2)
         except:
             pass
         
         print(f"✅ Tombol ditemukan: '{target.text.strip()}' — klik...")
         print(f"🔍 Info tombol: Displayed={target.is_displayed()}, Enabled={target.is_enabled()}")
         
-        # Coba beberapa metode klik
+        # Coba beberapa metode klik dengan tracking detail
         clicked = False
+        click_method = None
+        click_start_time = time_module.time()
+        
         try:
             # Coba normal click dulu
+            click_attempt_start = time_module.time()
             target.click()
+            click_attempt_elapsed = time_module.time() - click_attempt_start
             clicked = True
-            print("✅ Tombol CEK PESANAN berhasil diklik (normal click)")
+            click_method = "normal click"
+            print(f"✅ Tombol CEK PESANAN berhasil diklik (normal click, waktu: {click_attempt_elapsed:.3f}s)")
         except Exception as e1:
+            normal_click_elapsed = time_module.time() - click_attempt_start
+            print(f"  ❌ Normal click gagal (waktu: {normal_click_elapsed:.3f}s): {str(e1)[:80]}")
             try:
                 # Fallback: JavaScript click
+                js_click_start = time_module.time()
                 driver.execute_script("arguments[0].click();", target)
+                js_click_elapsed = time_module.time() - js_click_start
                 clicked = True
-                print("✅ Tombol CEK PESANAN berhasil diklik (JavaScript click)")
+                click_method = "JavaScript click"
+                print(f"✅ Tombol CEK PESANAN berhasil diklik (JavaScript click, waktu: {js_click_elapsed:.3f}s)")
             except Exception as e2:
-                print(f"❌ Gagal klik tombol CEK PESANAN: Normal={str(e1)}, JS={str(e2)}")
+                js_click_elapsed = time_module.time() - js_click_start
+                print(f"❌ Gagal klik tombol CEK PESANAN:")
+                print(f"   - Normal click: {str(e1)[:80]} (waktu: {normal_click_elapsed:.3f}s)")
+                print(f"   - JavaScript click: {str(e2)[:80]} (waktu: {js_click_elapsed:.3f}s)")
                 return False
         
         if clicked:
-            time.sleep(0.5)
+            click_total_time = time_module.time() - click_start_time
+            time.sleep(0.2)  # Kurangi delay dari 0.5 ke 0.2 detik
             elapsed_time = time_module.time() - start_time
-            print(f"✅ Berhasil klik CEK PESANAN (total waktu: {elapsed_time:.2f} detik)")
+            print(f"✅ Berhasil klik CEK PESANAN:")
+            print(f"   - Metode klik: {click_method}")
+            print(f"   - Waktu klik: {click_total_time:.3f}s")
+            print(f"   - Total waktu pencarian + klik: {elapsed_time:.2f}s")
             return True
         else:
             elapsed_time = time_module.time() - start_time
