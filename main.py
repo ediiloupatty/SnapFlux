@@ -86,7 +86,8 @@ def run_batalkan_inputan(accounts, selected_date):
         'gagal_navigasi': [],
         'gagal_waktu': [],
         'gagal_masuk_akun': [],
-        'gagal_masuk_akun_count': 0
+        'gagal_masuk_akun_count': 0,
+        'pangkalan_berhasil_dibatalkan': []  # Tracking pangkalan yang berhasil dibatalkan inputannya
     }
     
     # Loop pemrosesan setiap akun
@@ -177,6 +178,14 @@ def run_batalkan_inputan(accounts, selected_date):
                 
                 print("-" * 50)
                 print(f"✅ Data list pembeli berhasil diambil: {len(customer_list)} pembeli")
+                
+                # Track pangkalan yang berhasil dibatalkan inputannya
+                rekap['pangkalan_berhasil_dibatalkan'].append({
+                    'username': username,
+                    'nama': nama,
+                    'jumlah_pembeli': len(customer_list)
+                })
+                
                 rekap['sukses'].append(username)
             else:
                 print("⚠️ Data list pembeli tidak ditemukan atau gagal diambil")
@@ -254,6 +263,23 @@ def run_batalkan_inputan(accounts, selected_date):
         print(f"\n🔄 Akun dengan retry berhasil:")
         for username, reason in rekap['gagal_masuk_akun']:
             print(f"   - {username}: {reason}")
+    
+    # === SUMMARY PANGKALAN YANG BERHASIL DIBATALKAN INPUTANNYA ===
+    if rekap['pangkalan_berhasil_dibatalkan']:
+        print(f"\n{'='*60}")
+        print(f"✅ === SUMMARY: PANGKALAN YANG BERHASIL DIBATALKAN INPUTANNYA ===")
+        print(f"{'='*60}")
+        print(f"📊 Total pangkalan berhasil: {len(rekap['pangkalan_berhasil_dibatalkan'])}")
+        print("-" * 60)
+        
+        for idx, pangkalan in enumerate(rekap['pangkalan_berhasil_dibatalkan'], 1):
+            print(f"{idx:2d}. {pangkalan['nama']} ({pangkalan['username']})")
+            print(f"    📌 Jumlah pembeli yang dibatalkan: {pangkalan['jumlah_pembeli']}")
+        
+        print("-" * 60)
+        print(f"🎉 Total: {len(rekap['pangkalan_berhasil_dibatalkan'])} pangkalan berhasil dibatalkan inputannya")
+    else:
+        print(f"\n⚠️ Tidak ada pangkalan yang berhasil dibatalkan inputannya")
     
     print(f"\n🎉 Proses Batalkan Inputan selesai!")
     print(f"👋 Terima kasih!")

@@ -15,8 +15,13 @@ from pathlib import Path
 import subprocess
 import webbrowser
 
-# Tambahkan path src untuk import modul
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
+# Tambahkan path root dan src untuk import modul
+_root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_src_dir = os.path.join(_root_dir, "src")
+if _root_dir not in sys.path:
+    sys.path.insert(0, _root_dir)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
 
 try:
     from src.utils import load_accounts_from_excel, setup_logging
@@ -57,7 +62,19 @@ class SnapFluxGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("SnapFlux Automation v2.0")
-        self.root.geometry("1200x800")
+        
+        # Set window ke maximized (fullscreen native) saat startup
+        # Tapi tetap punya kontrol minimize/maximize/close
+        try:
+            # Windows: gunakan state('zoomed') untuk maximized dengan controls
+            self.root.state('zoomed')
+        except:
+            # Fallback untuk OS lain: gunakan geometry untuk fullscreen
+            self.root.update_idletasks()
+            width = self.root.winfo_screenwidth()
+            height = self.root.winfo_screenheight()
+            self.root.geometry(f"{width}x{height}+0+0")
+        
         self.root.minsize(1000, 700)
 
         # Variables
@@ -414,7 +431,8 @@ class SnapFluxGUI:
                     try:
                         import pandas as pd
 
-                        df = pd.read_excel(file_path)
+                        # Baca Excel dengan semua kolom sebagai string untuk menghindari masalah float/NaN
+                        df = pd.read_excel(file_path, dtype=str, keep_default_na=False)
 
                         # Convert to list of dicts and ensure consistent format
                         raw_accounts = df.to_dict("records")
@@ -423,18 +441,20 @@ class SnapFluxGUI:
                         self.accounts = []
                         for i, account in enumerate(raw_accounts):
                             if isinstance(account, dict):
+                                # Handle PIN - sekarang sudah string karena dtype=str
+                                pin_value = account.get("PIN", account.get("pin", account.get("Password", account.get("password", ""))))
+                                pin_str = str(pin_value).strip() if pin_value and str(pin_value).lower() not in ["nan", "none", ""] else ""
+                                
                                 # Ensure required keys exist with proper names
                                 normalized_account = {
-                                    "Pangkalan": account.get(
+                                    "Pangkalan": str(account.get(
                                         "Pangkalan",
-                                        account.get("pangkalan", f"Akun {i + 1}"),
-                                    ),
-                                    "Username": account.get(
+                                        account.get("pangkalan", account.get("Nama", account.get("nama", f"Akun {i + 1}"))),
+                                    )).strip(),
+                                    "Username": str(account.get(
                                         "Username", account.get("username", "")
-                                    ),
-                                    "PIN": str(
-                                        account.get("PIN", account.get("pin", ""))
-                                    ),
+                                    )).strip(),
+                                    "PIN": pin_str,
                                 }
                                 self.accounts.append(normalized_account)
                             else:
@@ -790,9 +810,18 @@ class SnapFluxGUI:
                 invalid_accounts.append(f"Akun {i + 1}: Bukan format dictionary")
                 continue
 
-            pangkalan = account.get("Pangkalan", "").strip()
-            username = account.get("Username", "").strip()
-            pin = str(account.get("PIN", "")).strip()
+            pangkalan = str(account.get("Pangkalan", "")).strip()
+            username = str(account.get("Username", "")).strip()
+            pin_raw = account.get("PIN", "")
+            
+            # Handle PIN yang mungkin float, int, atau NaN
+            import math
+            if pin_raw is None or (isinstance(pin_raw, float) and math.isnan(pin_raw)):
+                pin = ""
+            elif isinstance(pin_raw, (int, float)):
+                pin = str(int(pin_raw)) if not math.isnan(pin_raw) else ""
+            else:
+                pin = str(pin_raw).strip()
 
             if not pangkalan:
                 invalid_accounts.append(f"Akun {i + 1}: Pangkalan kosong")
@@ -802,7 +831,7 @@ class SnapFluxGUI:
                 invalid_accounts.append(f"Akun {i + 1}: Username kosong")
                 continue
 
-            if not pin:
+            if not pin or pin == "nan" or pin.lower() == "none":
                 invalid_accounts.append(f"Akun {i + 1}: PIN kosong")
                 continue
 

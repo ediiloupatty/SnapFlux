@@ -9,11 +9,17 @@ import sys
 import threading
 import time
 import traceback
+import re
 from datetime import datetime
 from typing import List, Dict, Any, Callable, Optional
 
-# Tambahkan path src untuk import modul
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
+# Tambahkan path root dan src untuk import modul
+_root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_src_dir = os.path.join(_root_dir, "src")
+if _root_dir not in sys.path:
+    sys.path.insert(0, _root_dir)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
 
 try:
     # Import modul utama program
@@ -38,18 +44,28 @@ try:
     from src.excel_handler import save_to_excel_pivot_format
     from src.config_manager import config_manager
 
-    # Import fungsi utama dari main.py
+    # Import fungsi utama dari main.py (di root directory)
     import importlib.util
 
-    main_spec = importlib.util.spec_from_file_location("main", "main.py")
-    main_module = importlib.util.module_from_spec(main_spec)
-    main_spec.loader.exec_module(main_module)
+    main_py_path = os.path.join(_root_dir, "main.py")
+    if os.path.exists(main_py_path):
+        main_spec = importlib.util.spec_from_file_location("main", main_py_path)
+        main_module = importlib.util.module_from_spec(main_spec)
+        main_spec.loader.exec_module(main_module)
+    else:
+        main_module = None
+        print(f"Warning: main.py not found at {main_py_path}")
 
     MODULES_AVAILABLE = True
 
 except ImportError as e:
     print(f"Warning: Some modules not available: {e}")
     MODULES_AVAILABLE = False
+    main_module = None
+except Exception as e:
+    print(f"Warning: Error loading main.py: {e}")
+    MODULES_AVAILABLE = False
+    main_module = None
 
 
 class AutomationRunner:
@@ -186,6 +202,10 @@ class AutomationRunner:
 
             # Setup logging
             setup_logging()
+            
+            # Pastikan folder results ada
+            results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
+            os.makedirs(results_dir, exist_ok=True)
 
             results = []
 
@@ -202,38 +222,104 @@ class AutomationRunner:
                 self.update_stats("processed", i + 1)
 
                 try:
-                    # Setup driver
-                    self.current_driver = setup_driver(headless=headless)
+                    # Login - login_direct akan membuat driver sendiri
+                    username = account.get("Username", "")
+                    pin = account.get("PIN", "")
+                    
+                    if not username or not pin:
+                        self.log_message(
+                            f"❌ Username atau PIN kosong untuk {account_name}", "error"
+                        )
+                        self.update_stats("failed", self.stats["failed"] + 1)
+                        continue
 
-                    # Login
-                    if not login_direct(self.current_driver, account):
+                    login_result = login_direct(username, pin)
+                    self.current_driver = login_result[0]
+                    login_info = login_result[1]
+
+                    # Check if login failed
+                    if self.current_driver is None:
                         self.log_message(
                             f"❌ Login gagal untuk {account_name}", "error"
                         )
                         self.update_stats("failed", self.stats["failed"] + 1)
                         continue
+                    
+                    # Check for "gagal masuk akun" message
+                    if login_info.get('gagal_masuk_akun', False):
+                        self.log_message(
+                            f"⚠️ Gagal masuk akun untuk {account_name}", "warning"
+                        )
 
                     time.sleep(delay)
 
                     # Get stock data
-                    stock_data = get_stock_value_direct(self.current_driver)
-                    sales_data = get_tabung_terjual_direct(self.current_driver)
+                    stock_value = get_stock_value_direct(self.current_driver)
+                    tabung_terjual = get_tabung_terjual_direct(self.current_driver)
 
-                    if stock_data or sales_data:
-                        result = {
-                            "Pangkalan": account_name,
-                            "Stock": stock_data if stock_data else "N/A",
-                            "Sales": sales_data if sales_data else "N/A",
-                            "Date": selected_date
-                            if selected_date
-                            else datetime.now().strftime("%Y-%m-%d"),
-                            "Status": "Success",
-                        }
-                        results.append(result)
-                        self.update_stats("success", self.stats["success"] + 1)
-                        self.log_message(
-                            f"✅ {account_name}: Stock={stock_data}, Sales={sales_data}"
-                        )
+                    # Prepare data untuk disimpan ke Excel (format sama seperti main.py)
+                    if stock_value or tabung_terjual:
+                        # Tentukan tanggal check (format sama seperti main.py)
+                        selected_date_obj = None
+                        if selected_date:
+                            if isinstance(selected_date, str):
+                                # Parse string date jika perlu
+                                try:
+                                    # Coba parse format YYYY-MM-DD
+                                    selected_date_obj = datetime.strptime(selected_date, "%Y-%m-%d")
+                                    tanggal_check = selected_date_obj.strftime("%d/%m/%Y")
+                                except:
+                                    # Jika gagal, gunakan string asli
+                                    tanggal_check = selected_date
+                            elif hasattr(selected_date, 'strftime'):
+                                # Jika sudah datetime object
+                                selected_date_obj = selected_date
+                                tanggal_check = selected_date.strftime("%d/%m/%Y")
+                            else:
+                                tanggal_check = "TANPA FILTER TANGGAL"
+                        else:
+                            tanggal_check = "TANPA FILTER TANGGAL"
+                        
+                        # Tentukan status berdasarkan total inputan
+                        if tabung_terjual:
+                            # Extract angka dari "28 Tabung" atau "0 Tabung"
+                            numbers = re.findall(r'\d+', tabung_terjual)
+                            if numbers:
+                                total_inputan_angka = int(numbers[0])
+                                if total_inputan_angka > 0:
+                                    status = "Ada Penjualan"
+                                else:
+                                    status = "Tidak Ada Penjualan"
+                            else:
+                                status = "Data Tidak Valid"
+                        else:
+                            tabung_terjual = "Tidak Ditemukan"
+                            status = "Error Ambil Data"
+                        
+                        # Simpan ke Excel dengan format pivot (format sama seperti main.py)
+                        username = account.get("Username", "")
+                        nama_pangkalan = account.get("Pangkalan", account_name)
+                        
+                        try:
+                            save_to_excel_pivot_format(
+                                pangkalan_id=username,  # Gunakan username sebagai PANGKALAN_ID
+                                nama_pangkalan=nama_pangkalan,
+                                tanggal_check=tanggal_check,
+                                stok_awal=stock_value if stock_value else "Tidak Ditemukan",
+                                total_inputan=tabung_terjual,
+                                status=status,
+                                selected_date=selected_date_obj
+                            )
+                            self.log_message(
+                                f"✅ {account_name}: Stock={stock_value}, Sales={tabung_terjual}, Status={status}"
+                            )
+                            self.log_message(f"💾 Data berhasil disimpan ke Excel!")
+                            self.update_stats("success", self.stats["success"] + 1)
+                        except Exception as e:
+                            self.log_message(
+                                f"❌ Error menyimpan Excel untuk {account_name}: {str(e)}", "error"
+                            )
+                            self.update_stats("failed", self.stats["failed"] + 1)
                     else:
                         self.log_message(f"⚠️ {account_name}: Tidak ada data", "warning")
                         self.update_stats("failed", self.stats["failed"] + 1)
@@ -252,13 +338,7 @@ class AutomationRunner:
 
                     time.sleep(1)  # Delay antar akun
 
-            # Save results to Excel
-            if results:
-                try:
-                    save_to_excel_pivot_format(results, "check_stock_results.xlsx")
-                    self.log_message(f"✅ Results saved to check_stock_results.xlsx")
-                except Exception as e:
-                    self.log_message(f"❌ Error saving Excel: {str(e)}", "error")
+            # Note: Data sudah disimpan per-akun di dalam loop, tidak perlu save batch lagi
 
             self.update_stats("end_time", datetime.now())
             duration = (
@@ -319,7 +399,7 @@ class AutomationRunner:
             ]
 
             # Gunakan fungsi run_batalkan_inputan dari main.py
-            if hasattr(main_module, "run_batalkan_inputan"):
+            if main_module is not None and hasattr(main_module, "run_batalkan_inputan"):
                 main_module.run_batalkan_inputan(normalized_accounts, selected_date)
 
                 self.update_stats("processed", len(accounts))
@@ -402,16 +482,34 @@ class AutomationRunner:
                 self.update_stats("processed", i + 1)
 
                 try:
-                    # Setup driver
-                    self.current_driver = setup_driver(headless=headless)
+                    # Login - login_direct akan membuat driver sendiri
+                    username = account.get("Username", "")
+                    pin = account.get("PIN", "")
+                    
+                    if not username or not pin:
+                        self.log_message(
+                            f"❌ Username atau PIN kosong untuk {account_name}", "error"
+                        )
+                        self.update_stats("failed", self.stats["failed"] + 1)
+                        continue
 
-                    # Login
-                    if not login_direct(self.current_driver, account):
+                    login_result = login_direct(username, pin)
+                    self.current_driver = login_result[0]
+                    login_info = login_result[1]
+
+                    # Check if login failed
+                    if self.current_driver is None:
                         self.log_message(
                             f"❌ Login gagal untuk {account_name}", "error"
                         )
                         self.update_stats("failed", self.stats["failed"] + 1)
                         continue
+                    
+                    # Check for "gagal masuk akun" message
+                    if login_info.get('gagal_masuk_akun', False):
+                        self.log_message(
+                            f"⚠️ Gagal masuk akun untuk {account_name}", "warning"
+                        )
 
                     time.sleep(delay)
 
