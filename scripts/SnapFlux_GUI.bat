@@ -22,16 +22,16 @@ for /f "tokens=2" %%i in ('python --version 2^>^&1') do set PYTHON_VERSION=%%i
 echo Python version: %PYTHON_VERSION%
 
 REM Check if main files exist
-if not exist "launch_gui.py" (
-    echo ERROR: launch_gui.py not found!
+if not exist "gui\launch_gui.py" (
+    echo ERROR: gui\launch_gui.py not found!
     echo Please make sure all files are in the correct directory.
     echo.
     pause
     exit /b 1
 )
 
-if not exist "gui.py" (
-    echo ERROR: gui.py not found!
+if not exist "gui\gui.py" (
+    echo ERROR: gui\gui.py not found!
     echo Please make sure all files are in the correct directory.
     echo.
     pause
@@ -43,7 +43,7 @@ echo Starting SnapFlux GUI...
 echo.
 
 REM Launch the GUI
-python launch_gui.py --gui
+python gui\launch_gui.py --gui
 
 REM If there was an error, pause so user can see it
 if %errorlevel% neq 0 (

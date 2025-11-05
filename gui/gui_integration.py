@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Callable, Optional
 
 # Tambahkan path src untuk import modul
-sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
 try:
     # Import modul utama program

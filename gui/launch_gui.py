@@ -75,7 +75,7 @@ def check_required_folders():
 
 def check_required_files():
     """Check if required files exist"""
-    required_files = ["main.py", "gui.py", "gui_integration.py", "requirements.txt"]
+    required_files = ["main.py", "gui/gui.py", "gui/gui_integration.py", "requirements.txt"]
 
     missing_files = []
 
@@ -110,7 +110,12 @@ def launch_gui():
     """Launch GUI mode"""
     try:
         print("🚀 Starting SnapFlux GUI...")
-        from gui import main as gui_main
+        # Add parent directory to path for imports
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+        
+        from gui.gui import main as gui_main
 
         gui_main()
     except ImportError as e:

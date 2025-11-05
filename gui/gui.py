@@ -16,7 +16,7 @@ import subprocess
 import webbrowser
 
 # Tambahkan path src untuk import modul
-sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
 try:
     from src.utils import load_accounts_from_excel, setup_logging
@@ -38,6 +38,10 @@ except ImportError as e:
     config_manager = None
 
 try:
+    # Import from same directory
+    gui_dir = os.path.dirname(os.path.abspath(__file__))
+    if gui_dir not in sys.path:
+        sys.path.insert(0, gui_dir)
     from gui_integration import gui_integration
 
     INTEGRATION_AVAILABLE = True
