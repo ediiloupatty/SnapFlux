@@ -2,45 +2,72 @@
 Constants dan konfigurasi untuk automation script SnapFlux
 File ini berisi semua konstanta, URL, dan konfigurasi yang digunakan di seluruh aplikasi
 """
+
 import os
 from datetime import datetime
 
 # Import config manager untuk enhanced configuration (backward compatible)
 try:
     from .config_manager import config_manager
-    USE_ENHANCED_CONFIG = True
+
+    _use_enhanced_config = True
 except ImportError:
-    USE_ENHANCED_CONFIG = False
+    config_manager = None
+    _use_enhanced_config = False
 
 # ========== KONFIGURASI URL ==========
 LOGIN_URL = "https://subsiditepatlpg.mypertamina.id/merchant-login"
 
+
 # Enhanced configuration dengan fallback ke hardcoded values
-def get_config_value(key: str, fallback_value):
+def get_config_value(key: str, fallback_value: object) -> object:
     """
     Get configuration value dari enhanced config manager atau fallback ke hardcoded value
     Maintains backward compatibility dengan existing code
     """
-    if USE_ENHANCED_CONFIG:
+    if _use_enhanced_config and config_manager is not None:
         return config_manager.get(key, fallback_value)
     return fallback_value
 
+
 # ========== KONFIGURASI PATH DIREKTORI ==========
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AKUN_DIR = os.path.join(BASE_DIR, 'akun')
-RESULTS_DIR = os.path.join(BASE_DIR, 'results')
-LOGS_DIR = os.path.join(BASE_DIR, 'logs')
-LOG_FILE = os.path.join(LOGS_DIR, 'automation.log')
+AKUN_DIR = os.path.join(BASE_DIR, "akun")
+RESULTS_DIR = os.path.join(BASE_DIR, "results")
+LOGS_DIR = os.path.join(BASE_DIR, "logs")
+LOG_FILE = os.path.join(LOGS_DIR, "automation.log")
 
 # ========== KONSTANTA BULAN INDONESIA ==========
 BULAN_ID = [
-    '', 'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
-    'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
+    "",
+    "JANUARI",
+    "FEBRUARI",
+    "MARET",
+    "APRIL",
+    "MEI",
+    "JUNI",
+    "JULI",
+    "AGUSTUS",
+    "SEPTEMBER",
+    "OKTOBER",
+    "NOVEMBER",
+    "DESEMBER",
 ]
 
 BULAN_SINGKAT = [
-    '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'
+    "",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "Mei",
+    "Jun",
+    "Jul",
+    "Agt",
+    "Sep",
+    "Okt",
+    "Nov",
+    "Des",
 ]
 
 # ========== KONFIGURASI CHROME ==========
@@ -49,8 +76,8 @@ CHROMEDRIVER_PATH = r"D:\edi\Programing\Snapflux v2\chrome\chromedriver.exe"
 
 # ========== KONFIGURASI TIMING ==========
 DEFAULT_DELAY = 3.0  # Naik dari 2.0 ke 3.0 detik untuk stabilitas
-RETRY_DELAY = 3.0    # Naik dari 2.0 ke 3.0 detik untuk retry
-ERROR_DELAY = 2.0    # Naik dari 1.0 ke 2.0 detik untuk error handling
+RETRY_DELAY = 3.0  # Naik dari 2.0 ke 3.0 detik untuk retry
+ERROR_DELAY = 2.0  # Naik dari 1.0 ke 2.0 detik untuk error handling
 INTER_ACCOUNT_DELAY = 4.0  # Naik dari 2.5 ke 4.0 detik untuk anti-rate limiting
 MAX_RETRIES = 3
 
@@ -66,33 +93,34 @@ IMPLICIT_WAIT = 5
 
 # ========== FUNGSI GENERATE EXCEL DYNAMIC ==========
 
-def get_master_filename(selected_date=None):
+
+def get_master_filename(selected_date: datetime | None = None) -> str:
     """
     Generate nama file Excel master dengan format: DATA_SNAPFLUX_MASTER_YYYY_BULAN.xlsx
     File master incremental untuk sistem harian yang optimal
     """
     if selected_date:
-        year = selected_date.year
-        month = selected_date.month
-        month_name = BULAN_ID[month].upper()
+        year: int = selected_date.year
+        month: int = selected_date.month
+        month_name: str = BULAN_ID[month].upper()
     else:
         now = datetime.now()
         year = now.year
         month = now.month
         month_name = BULAN_ID[month].upper()
-    
+
     return f"DATA_SNAPFLUX_MASTER_{year}_{month_name}.xlsx"
 
-def get_sheet_name_dynamic(selected_date=None):
+
+def get_sheet_name_dynamic(selected_date: datetime | None = None) -> str:
     """
     Generate nama sheet berdasarkan bulan saat ini
     """
     if selected_date:
-        month = selected_date.month
-        year = selected_date.year
+        month: int = selected_date.month
+        year: int = selected_date.year
     else:
         month = datetime.now().month
         year = datetime.now().year
-    
-    return f"{BULAN_ID[month].upper()}_{year}"
 
+    return f"{BULAN_ID[month].upper()}_{year}"
