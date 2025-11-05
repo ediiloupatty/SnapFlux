@@ -30,6 +30,14 @@ def check_dependencies():
 def install_dependencies(packages):
     """Install missing dependencies"""
     try:
+        # First, upgrade pip and setuptools
+        print("🔧 Upgrading pip and setuptools...")
+        upgrade_result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "setuptools"],
+            capture_output=True,
+            text=True,
+        )
+
         for package in packages:
             print(f"Installing {package}...")
             result = subprocess.run(
@@ -39,10 +47,12 @@ def install_dependencies(packages):
             )
             if result.returncode != 0:
                 print(f"Failed to install {package}: {result.stderr}")
+                print(f"💡 Try running: python fix_environment.py")
                 return False
         return True
     except Exception as e:
         print(f"Error installing dependencies: {e}")
+        print(f"💡 Try running: python fix_environment.py")
         return False
 
 
@@ -105,15 +115,68 @@ def launch_gui():
         gui_main()
     except ImportError as e:
         print(f"❌ Error importing GUI: {e}")
-        messagebox.showerror(
-            "Import Error",
-            f"Tidak dapat import GUI module:\n{e}\n\n"
-            "Pastikan semua file ada dan dependencies terinstall.",
-        )
-        return False
+        print("\n💡 Suggestions to fix:")
+        print("1. Run: python fix_environment.py")
+        print("2. Check if all files exist in src/ folder")
+        print("3. Install dependencies: pip install -r requirements.txt")
+
+        try:
+            import tkinter as tk
+            from tkinter import messagebox
+
+            root = tk.Tk()
+            root.withdraw()
+            result = messagebox.askyesnocancel(
+                "Import Error",
+                f"GUI module import failed:\n{e}\n\n"
+                "Would you like to:\n"
+                "• YES - Run environment fix automatically\n"
+                "• NO - Continue with console mode\n"
+                "• CANCEL - Exit",
+            )
+            root.destroy()
+
+            if result is True:  # Yes - Run fix
+                print("\n🔧 Running environment fix...")
+                import subprocess
+
+                subprocess.run([sys.executable, "fix_environment.py"])
+                return False
+            elif result is False:  # No - Console mode
+                print("\n🔄 Switching to console mode...")
+                launch_console()
+                return True
+            else:  # Cancel
+                return False
+
+        except ImportError:
+            # tkinter not available, just show console message
+            choice = input("\nRun environment fix? (y/n): ").lower()
+            if choice == "y":
+                import subprocess
+
+                subprocess.run([sys.executable, "fix_environment.py"])
+            return False
+
     except Exception as e:
         print(f"❌ Error launching GUI: {e}")
-        messagebox.showerror("Launch Error", f"Error menjalankan GUI:\n{e}")
+        print("\n💡 Try running: python fix_environment.py")
+
+        try:
+            import tkinter as tk
+            from tkinter import messagebox
+
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(
+                "Launch Error",
+                f"Error launching GUI:\n{e}\n\n"
+                "Try running fix_environment.py to resolve issues.",
+            )
+            root.destroy()
+        except ImportError:
+            pass
+
         return False
 
     return True
@@ -228,24 +291,40 @@ def main():
     # Check and create folders
     if not check_required_folders():
         print("❌ Failed to create required folders")
+        print("💡 Try running with administrator privileges or check permissions")
         return
 
     # Check missing files
     missing_files = check_required_files()
     if missing_files:
         print(f"❌ Missing required files: {', '.join(missing_files)}")
-        print("Please ensure all files are present before running.")
+        print("💡 Please ensure all files are present before running.")
+        print("💡 If files are missing, re-download or restore from backup.")
         return
 
     # Check dependencies
     missing_deps = check_dependencies()
     if missing_deps:
         print(f"⚠️ Missing dependencies: {', '.join(missing_deps)}")
-        choice = input("Install missing dependencies? (y/n): ").lower()
-        if choice == "y":
+        print("\n💡 Recommended solutions:")
+        print("1. Run: python fix_environment.py (recommended)")
+        print("2. Manual install: pip install " + " ".join(missing_deps))
+
+        choice = input(
+            "\nChoose option (1=auto fix, 2=manual install, n=skip): "
+        ).lower()
+        if choice == "1":
+            print("🔧 Running automatic environment fix...")
+            import subprocess
+
+            result = subprocess.run([sys.executable, "fix_environment.py"])
+            if result.returncode != 0:
+                print("❌ Environment fix failed. Try manual installation.")
+                return
+        elif choice == "2":
             if not install_dependencies(missing_deps):
-                print("❌ Failed to install dependencies. Please install manually:")
-                print(f"pip install {' '.join(missing_deps)}")
+                print("❌ Failed to install dependencies manually.")
+                print("💡 Try: python fix_environment.py")
                 return
         else:
             print("⚠️ Some features may not work without required dependencies.")

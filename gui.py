@@ -20,12 +20,33 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 try:
     from src.utils import load_accounts_from_excel, setup_logging
+
+    UTILS_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import src.utils: {e}")
+    UTILS_AVAILABLE = False
+    load_accounts_from_excel = None
+    setup_logging = None
+
+try:
     from src.config_manager import config_manager
+
+    CONFIG_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import config_manager: {e}")
+    CONFIG_AVAILABLE = False
+    config_manager = None
+
+try:
     from gui_integration import gui_integration
 
-    MODULES_AVAILABLE = True
-except ImportError:
-    MODULES_AVAILABLE = False
+    INTEGRATION_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import gui_integration: {e}")
+    INTEGRATION_AVAILABLE = False
+    gui_integration = None
+
+MODULES_AVAILABLE = UTILS_AVAILABLE and CONFIG_AVAILABLE and INTEGRATION_AVAILABLE
 
 
 class SnapFluxGUI:
@@ -319,16 +340,28 @@ class SnapFluxGUI:
 
         # Check if modules are available
         if not MODULES_AVAILABLE:
+            missing_modules = []
+            if not UTILS_AVAILABLE:
+                missing_modules.append("src.utils")
+            if not CONFIG_AVAILABLE:
+                missing_modules.append("src.config_manager")
+            if not INTEGRATION_AVAILABLE:
+                missing_modules.append("gui_integration")
+
             self.log_message(
-                "⚠️ Warning: Beberapa modul tidak tersedia. Mode simulasi aktif.",
+                f"⚠️ Warning: Modul tidak tersedia: {', '.join(missing_modules)}. Mode simulasi aktif.",
                 "warning",
+            )
+            self.log_message(
+                "💡 Tip: Pastikan semua file src/ ada dan dependencies terinstall",
+                "info",
             )
         else:
             self.log_message("✅ Semua modul tersedia. Siap untuk automation!")
 
     def setup_integration_callbacks(self):
         """Setup callbacks untuk GUI integration"""
-        if MODULES_AVAILABLE:
+        if INTEGRATION_AVAILABLE and gui_integration is not None:
             callbacks = {
                 "log_message": self.log_message,
                 "update_progress": self.update_progress_callback,
@@ -362,7 +395,7 @@ class SnapFluxGUI:
 
         if file_path:
             try:
-                if MODULES_AVAILABLE:
+                if UTILS_AVAILABLE and load_accounts_from_excel is not None:
                     self.accounts = load_accounts_from_excel(file_path)
                     count = len(self.accounts)
                     self.account_count_label.config(text=f"Akun: {count}")
@@ -370,9 +403,89 @@ class SnapFluxGUI:
                         f"✅ Berhasil load {count} akun dari {os.path.basename(file_path)}"
                     )
                 else:
+                    # Fallback manual loading
                     self.log_message(
-                        "❌ Tidak dapat load akun: modul tidak tersedia", "error"
+                        "🔄 Mencoba load akun dengan method alternatif...", "info"
                     )
+                    try:
+                        import pandas as pd
+
+                        df = pd.read_excel(file_path)
+
+                        # Convert to list of dicts and ensure consistent format
+                        raw_accounts = df.to_dict("records")
+
+                        # Normalize accounts to ensure consistent dictionary format
+                        self.accounts = []
+                        for i, account in enumerate(raw_accounts):
+                            if isinstance(account, dict):
+                                # Ensure required keys exist with proper names
+                                normalized_account = {
+                                    "Pangkalan": account.get(
+                                        "Pangkalan",
+                                        account.get("pangkalan", f"Akun {i + 1}"),
+                                    ),
+                                    "Username": account.get(
+                                        "Username", account.get("username", "")
+                                    ),
+                                    "PIN": str(
+                                        account.get("PIN", account.get("pin", ""))
+                                    ),
+                                }
+                                self.accounts.append(normalized_account)
+                            else:
+                                # Handle any non-dict formats
+                                self.accounts.append(
+                                    {
+                                        "Pangkalan": f"Akun {i + 1}",
+                                        "Username": "",
+                                        "PIN": "",
+                                    }
+                                )
+
+                        count = len(self.accounts)
+                        self.account_count_label.config(text=f"Akun: {count}")
+                        self.log_message(
+                            f"✅ Berhasil load {count} akun dari {os.path.basename(file_path)} (mode alternatif)"
+                        )
+
+                        # Show first account structure for verification
+                        if self.accounts:
+                            columns = list(self.accounts[0].keys())
+                            self.log_message(
+                                f"📋 Kolom terdeteksi: {', '.join(columns)}", "info"
+                            )
+
+                            # Validate and show sample data (without sensitive info)
+                            valid_accounts = self.validate_account_data()
+                            if valid_accounts > 0:
+                                sample_account = self.accounts[0]
+                                pangkalan = sample_account.get("Pangkalan", "N/A")
+                                username_preview = sample_account.get("Username", "")
+                                if username_preview and len(username_preview) > 3:
+                                    username_preview = username_preview[:3] + "***"
+                                self.log_message(
+                                    f"📋 Sample: Pangkalan='{pangkalan}', Username='{username_preview}'",
+                                    "info",
+                                )
+                                self.log_message(
+                                    f"✅ {valid_accounts}/{count} akun valid untuk automation",
+                                    "info" if valid_accounts == count else "warning",
+                                )
+                            else:
+                                self.log_message(
+                                    "⚠️ Tidak ada akun valid! Periksa format data Excel",
+                                    "warning",
+                                )
+
+                    except ImportError:
+                        self.log_message(
+                            "❌ pandas tidak tersedia untuk load Excel", "error"
+                        )
+                    except Exception as e:
+                        self.log_message(
+                            f"❌ Error load akun (alternatif): {str(e)}", "error"
+                        )
             except Exception as e:
                 self.log_message(f"❌ Error load akun: {str(e)}", "error")
 
@@ -440,13 +553,14 @@ class SnapFluxGUI:
         }
 
         # Jalankan menggunakan GUI integration
-        if MODULES_AVAILABLE:
+        if INTEGRATION_AVAILABLE and gui_integration is not None:
             self.current_thread = gui_integration.run_automation(
                 feature_type, self.accounts, config
             )
             self.current_thread.start()
         else:
             # Fallback to simulation
+            self.log_message("🔄 Menjalankan mode simulasi...", "info")
             thread = threading.Thread(
                 target=self.automation_worker,
                 args=(feature_type, config["selected_date"]),
@@ -652,12 +766,57 @@ class SnapFluxGUI:
             if result:
                 self.is_running = False
                 # Stop automation melalui integration
-                if MODULES_AVAILABLE:
+                if INTEGRATION_AVAILABLE and gui_integration is not None:
                     gui_integration.stop_automation()
                 self.log_message("🛑 Proses dihentikan oleh user")
                 self.automation_finished()
         else:
             messagebox.showinfo("Info", "Tidak ada proses yang sedang berjalan.")
+
+    def validate_account_data(self):
+        """Validate account data and return count of valid accounts"""
+        if not self.accounts:
+            return 0
+
+        valid_count = 0
+        invalid_accounts = []
+
+        for i, account in enumerate(self.accounts):
+            if not isinstance(account, dict):
+                invalid_accounts.append(f"Akun {i + 1}: Bukan format dictionary")
+                continue
+
+            pangkalan = account.get("Pangkalan", "").strip()
+            username = account.get("Username", "").strip()
+            pin = str(account.get("PIN", "")).strip()
+
+            if not pangkalan:
+                invalid_accounts.append(f"Akun {i + 1}: Pangkalan kosong")
+                continue
+
+            if not username:
+                invalid_accounts.append(f"Akun {i + 1}: Username kosong")
+                continue
+
+            if not pin:
+                invalid_accounts.append(f"Akun {i + 1}: PIN kosong")
+                continue
+
+            valid_count += 1
+
+        # Log invalid accounts if any
+        if invalid_accounts:
+            self.log_message(
+                f"⚠️ Found {len(invalid_accounts)} invalid accounts:", "warning"
+            )
+            for issue in invalid_accounts[:5]:  # Show max 5 issues
+                self.log_message(f"  - {issue}", "warning")
+            if len(invalid_accounts) > 5:
+                self.log_message(
+                    f"  ... and {len(invalid_accounts) - 5} more issues", "warning"
+                )
+
+        return valid_count
 
     def run(self):
         """Jalankan GUI"""

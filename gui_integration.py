@@ -80,6 +80,41 @@ class AutomationRunner:
             "end_time": None,
         }
 
+    def normalize_account_data(self, account: Any, index: int) -> Dict[str, Any]:
+        """
+        Normalize account data to consistent dictionary format
+
+        Args:
+            account: Account data in various formats (dict, tuple, list)
+            index: Account index for fallback naming
+
+        Returns:
+            Dict with standardized account data
+        """
+        if isinstance(account, dict):
+            # Already a dict, ensure required keys exist
+            return {
+                "Pangkalan": account.get("Pangkalan", f"Akun {index + 1}"),
+                "Username": account.get("Username", ""),
+                "PIN": account.get("PIN", ""),
+            }
+        elif isinstance(account, (list, tuple)):
+            # Convert sequence to dict
+            return {
+                "Pangkalan": account[0]
+                if len(account) > 0 and account[0]
+                else f"Akun {index + 1}",
+                "Username": account[1] if len(account) > 1 and account[1] else "",
+                "PIN": str(account[2]) if len(account) > 2 and account[2] else "",
+            }
+        else:
+            # Fallback for any other format
+            return {
+                "Pangkalan": f"Akun {index + 1}",
+                "Username": "",
+                "PIN": "",
+            }
+
     def log_message(self, message: str, level: str = "info"):
         """Send message to GUI callback"""
         if self.gui_callback:
@@ -159,7 +194,10 @@ class AutomationRunner:
                     self.log_message("❌ Check Stock dihentikan oleh user")
                     return False
 
-                account_name = account.get("Pangkalan", f"Akun {i + 1}")
+                # Normalize account data to consistent format
+                account = self.normalize_account_data(account, i)
+                account_name = account["Pangkalan"]
+
                 self.log_message(f"Processing {account_name} ({i + 1}/{len(accounts)})")
                 self.update_stats("processed", i + 1)
 
@@ -275,9 +313,14 @@ class AutomationRunner:
 
             self.log_message(f"❌ Memulai Cancel Input untuk {len(accounts)} akun")
 
+            # Normalize all accounts first
+            normalized_accounts = [
+                self.normalize_account_data(acc, i) for i, acc in enumerate(accounts)
+            ]
+
             # Gunakan fungsi run_batalkan_inputan dari main.py
             if hasattr(main_module, "run_batalkan_inputan"):
-                main_module.run_batalkan_inputan(accounts, selected_date)
+                main_module.run_batalkan_inputan(normalized_accounts, selected_date)
 
                 self.update_stats("processed", len(accounts))
                 self.update_stats("success", len(accounts))
@@ -351,7 +394,10 @@ class AutomationRunner:
                     self.log_message("❌ Catat Penjualan dihentikan oleh user")
                     return False
 
-                account_name = account.get("Pangkalan", f"Akun {i + 1}")
+                # Normalize account data to consistent format
+                account = self.normalize_account_data(account, i)
+                account_name = account["Pangkalan"]
+
                 self.log_message(f"Processing {account_name} ({i + 1}/{len(accounts)})")
                 self.update_stats("processed", i + 1)
 
