@@ -946,8 +946,8 @@ def click_cek_pesanan(driver):
                         wait_remaining = WebDriverWait(driver, wait_timeout)
                         wait_result = None
                         try:
-                            # Gunakan presence_of_element_located (lebih cepat dari visibility)
-                            wait_remaining.until(EC.presence_of_element_located((how, value)))
+                            # Gunakan visibility_of_element_located untuk memastikan elemen benar-benar visible dan clickable
+                            wait_remaining.until(EC.visibility_of_element_located((how, value)))
                             wait_result = "SUCCESS"
                             wait_elapsed = time_module.time() - selector_start_time
                             print(f"  ✅ WebDriverWait berhasil menemukan elemen (waktu: {wait_elapsed:.3f}s)")
@@ -963,11 +963,61 @@ def click_cek_pesanan(driver):
                         find_elapsed = time_module.time() - selector_start_time
                         print(f"  🔍 find_elements: menemukan {elements_count} elemen (waktu: {find_elapsed:.3f}s)")
                         
+                        # Tunggu sebentar untuk memastikan elemen benar-benar siap (render selesai)
+                        time_module.sleep(0.05)
+                        
                         for idx, el in enumerate(elements):
                             try:
-                                label = (el.text or "").strip().upper()
-                                if "CEK" in label and "PESANAN" in label:
-                                    if el.is_displayed():
+                                # Coba multiple method untuk mendapatkan text dengan retry
+                                label = ""
+                                for retry in range(3):  # Retry maksimal 3 kali
+                                    try:
+                                        # Coba el.text dulu
+                                        label = (el.text or "").strip()
+                                        if label:
+                                            break
+                                        # Jika kosong, coba get_attribute('textContent')
+                                        label = (el.get_attribute('textContent') or "").strip()
+                                        if label:
+                                            break
+                                        # Jika masih kosong, coba get_attribute('innerText')
+                                        label = (el.get_attribute('innerText') or "").strip()
+                                        if label:
+                                            break
+                                        # Jika masih kosong, tunggu sebentar dan coba lagi
+                                        if retry < 2:
+                                            time_module.sleep(0.05)
+                                    except:
+                                        if retry < 2:
+                                            time_module.sleep(0.05)
+                                
+                                label_upper = label.upper()
+                                # Validasi: 
+                                # - Untuk selector berbasis text (selector 1): harus ada text yang valid
+                                # - Untuk selector XPath langsung (selector 2): lebih fleksibel, bisa terima jika elemen ditemukan meskipun text belum ter-load
+                                if selector_index == 1:
+                                    # Selector pertama harus punya text yang valid
+                                    is_valid = "CEK" in label_upper and "PESANAN" in label_upper
+                                else:
+                                    # Selector kedua (XPath langsung) lebih fleksibel - terima jika text valid atau label kosong
+                                    is_valid = ("CEK" in label_upper and "PESANAN" in label_upper) or (not label)
+                                
+                                if is_valid:
+                                    # Retry check is_displayed() karena elemen mungkin masih dalam proses render
+                                    is_displayed = False
+                                    for display_retry in range(5):  # Retry maksimal 5 kali
+                                        try:
+                                            is_displayed = el.is_displayed()
+                                            if is_displayed:
+                                                break
+                                            # Jika belum displayed, tunggu sebentar
+                                            if display_retry < 4:
+                                                time_module.sleep(0.05)
+                                        except:
+                                            if display_retry < 4:
+                                                time_module.sleep(0.05)
+                                    
+                                    if is_displayed:
                                         # Dapatkan posisi button
                                         try:
                                             location = el.location
@@ -978,14 +1028,17 @@ def click_cek_pesanan(driver):
                                         
                                         target = el
                                         selector_elapsed = time_module.time() - selector_start_time
-                                        print(f"  ✅ Element #{idx+1} cocok! Label: '{label}'")
+                                        if label:
+                                            print(f"  ✅ Element #{idx+1} cocok! Label: '{label}'")
+                                        else:
+                                            print(f"  ✅ Element #{idx+1} cocok! (label kosong, tapi selector spesifik dan elemen displayed)")
                                         print(f"  📍 Posisi button: {position_info}")
                                         print(f"  ✅ Tombol CEK PESANAN ditemukan dengan selector #{selector_index} ({selector_type}) - waktu: {selector_elapsed:.3f}s")
                                         break
                                     else:
-                                        print(f"  ⚠️ Element #{idx+1} tidak displayed: '{label}'")
+                                        print(f"  ⚠️ Element #{idx+1} tidak displayed setelah retry: '{label if label else 'N/A'}'")
                                 else:
-                                    print(f"  ⚠️ Element #{idx+1} tidak cocok: label='{label[:30]}...'")
+                                    print(f"  ⚠️ Element #{idx+1} tidak cocok: label='{label[:30] if label else 'kosong'}...'")
                             except Exception as el_e:
                                 print(f"  ⚠️ Error saat cek element #{idx+1}: {str(el_e)[:50]}")
                                 continue
@@ -998,16 +1051,76 @@ def click_cek_pesanan(driver):
                         continue
                 else:
                     # Langsung find_elements tanpa wait (untuk XPath langsung)
+                    # Tapi tetap coba wait untuk visibility jika elemen ditemukan
                     elements = driver.find_elements(how, value)
                     elements_count = len(elements)
                     find_elapsed = time_module.time() - selector_start_time
                     print(f"  🔍 find_elements: menemukan {elements_count} elemen (waktu: {find_elapsed:.3f}s)")
                     
+                    # Jika elemen ditemukan, coba wait untuk visibility dengan timeout singkat
+                    if elements_count > 0:
+                        try:
+                            remaining_time = max_total_time - (time_module.time() - start_time)
+                            if remaining_time > 0.1:  # Jika masih ada waktu tersisa
+                                wait_timeout = min(0.2, remaining_time - 0.05)
+                                wait_quick = WebDriverWait(driver, wait_timeout)
+                                wait_quick.until(EC.visibility_of_element_located((how, value)))
+                                time_module.sleep(0.05)  # Tunggu sebentar untuk memastikan render selesai
+                        except:
+                            pass  # Jika wait gagal, lanjutkan dengan elemen yang ada
+                    
                     for idx, el in enumerate(elements):
                         try:
-                            label = (el.text or "").strip().upper()
-                            if "CEK" in label and "PESANAN" in label:
-                                if el.is_displayed():
+                            # Coba multiple method untuk mendapatkan text dengan retry
+                            label = ""
+                            for retry in range(3):  # Retry maksimal 3 kali
+                                try:
+                                    # Coba el.text dulu
+                                    label = (el.text or "").strip()
+                                    if label:
+                                        break
+                                    # Jika kosong, coba get_attribute('textContent')
+                                    label = (el.get_attribute('textContent') or "").strip()
+                                    if label:
+                                        break
+                                    # Jika masih kosong, coba get_attribute('innerText')
+                                    label = (el.get_attribute('innerText') or "").strip()
+                                    if label:
+                                        break
+                                    # Jika masih kosong, tunggu sebentar dan coba lagi
+                                    if retry < 2:
+                                        time_module.sleep(0.05)
+                                except:
+                                    if retry < 2:
+                                        time_module.sleep(0.05)
+                            
+                            label_upper = label.upper()
+                            # Validasi: 
+                            # - Untuk selector berbasis text (selector 1): harus ada text yang valid
+                            # - Untuk selector XPath langsung (selector 2): lebih fleksibel, bisa terima jika elemen ditemukan meskipun text belum ter-load
+                            if selector_index == 1:
+                                # Selector pertama harus punya text yang valid
+                                is_valid = "CEK" in label_upper and "PESANAN" in label_upper
+                            else:
+                                # Selector kedua (XPath langsung) lebih fleksibel - terima jika text valid atau label kosong
+                                is_valid = ("CEK" in label_upper and "PESANAN" in label_upper) or (not label)
+                            
+                            if is_valid:
+                                # Retry check is_displayed() karena elemen mungkin masih dalam proses render
+                                is_displayed = False
+                                for display_retry in range(5):  # Retry maksimal 5 kali
+                                    try:
+                                        is_displayed = el.is_displayed()
+                                        if is_displayed:
+                                            break
+                                        # Jika belum displayed, tunggu sebentar
+                                        if display_retry < 4:
+                                            time_module.sleep(0.05)
+                                    except:
+                                        if display_retry < 4:
+                                            time_module.sleep(0.05)
+                                
+                                if is_displayed:
                                     # Dapatkan posisi button
                                     try:
                                         location = el.location
@@ -1018,14 +1131,17 @@ def click_cek_pesanan(driver):
                                     
                                     target = el
                                     selector_elapsed = time_module.time() - selector_start_time
-                                    print(f"  ✅ Element #{idx+1} cocok! Label: '{label}'")
+                                    if label:
+                                        print(f"  ✅ Element #{idx+1} cocok! Label: '{label}'")
+                                    else:
+                                        print(f"  ✅ Element #{idx+1} cocok! (label kosong, tapi selector spesifik dan elemen displayed)")
                                     print(f"  📍 Posisi button: {position_info}")
                                     print(f"  ✅ Tombol CEK PESANAN ditemukan dengan selector #{selector_index} ({selector_type}) - waktu: {selector_elapsed:.3f}s")
                                     break
                                 else:
-                                    print(f"  ⚠️ Element #{idx+1} tidak displayed: '{label}'")
+                                    print(f"  ⚠️ Element #{idx+1} tidak displayed setelah retry: '{label if label else 'N/A'}'")
                             else:
-                                print(f"  ⚠️ Element #{idx+1} tidak cocok: label='{label[:30]}...'")
+                                print(f"  ⚠️ Element #{idx+1} tidak cocok: label='{label[:30] if label else 'kosong'}...'")
                         except Exception as el_e:
                             print(f"  ⚠️ Error saat cek element #{idx+1}: {str(el_e)[:50]}")
                             continue
