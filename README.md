@@ -281,6 +281,9 @@ Delays optimized for responsiveness without sacrificing stability:
 - “CEK PESANAN”: 0.7s before + 0.8s after
 - “PROSES PENJUALAN”: 0.7s before + 0.8s after
 
+##Other Project
+[The same project, but now using Playwright](https://github.com/ediiloupatty/SnapFlux-Playwright.git)
+
 ## 🤝 Contributing
 
 1. Fork the repository
